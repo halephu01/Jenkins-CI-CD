@@ -1,0 +1,6 @@
+jwt:
+  signerKey: "YCfb/2CrP/ogkgDu11sl5beiECqAHdT1uKyJufhAu9jmYSFvibW9kNnpBpIidKic"
+  valid-duration: 2 #in second
+  refreshable-duration: 4 #in second
+
+
