@@ -32,7 +32,6 @@ pipeline {
 
         stage('Run Microservices') {
             steps {
-                // Danh sách các services
                 script {
                     def services = ['api-gateway', 'identity-service', 'notification-service', 'order-service', 'product-service', 'inventory-service'] 
                     services.each { service ->
@@ -48,7 +47,7 @@ pipeline {
             steps {
                 dir('frontend') {
                     sh 'npm install'
-                    sh 'npm start'
+                    sh 'npm start & echo "Frontend is running at http://localhost:3500"'
                 }
             }
         }
