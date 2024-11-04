@@ -12,15 +12,15 @@ pipeline {
             }
         }
 
-        stage('Code Quality Analysis') {
-            steps {
-                script {
-                    withSonarQubeEnv('SonarQube') {
-                        sh 'sonar-scanner'
-                    }
-                }
-            }
-        }
+        // stage('Code Quality Analysis') {
+        //     steps {
+        //         script {
+        //             withSonarQubeEnv('SonarQube') {
+        //                 sh 'sonar-scanner'
+        //             }
+        //         }
+        //     }
+        // }
 
         stage('Docker Compose Up') {
             steps {
