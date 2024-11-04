@@ -22,7 +22,6 @@ pipeline {
             }
         }
 
-        stages {
         stage('Docker Compose Up') {
             steps {
                 script {
@@ -32,17 +31,17 @@ pipeline {
         }
 
         stage('Run Microservices') {
-                steps {
-                    // Danh sách các services
-                    script {
-                        def services = ['api-gateway', 'identity-service', 'notification-service', 'order-service', 'product-service', 'inventory-service'] 
-                        services.each { service ->
-                            dir(service) {
-                                sh 'mvn spring-boot:run'
-                            }
+            steps {
+                // Danh sách các services
+                script {
+                    def services = ['api-gateway', 'identity-service', 'notification-service', 'order-service', 'product-service', 'inventory-service'] 
+                    services.each { service ->
+                        dir(service) {
+                            sh 'mvn spring-boot:run'
                         }
                     }
                 }
+            }
         }
 
         stage('Setup Frontend') {
