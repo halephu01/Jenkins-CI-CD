@@ -27,7 +27,7 @@
 2. **CHẠY DOCKER COMPOSE ĐỂ KHỞI ĐỘNG CÁC CONTAINER CẦN THIẾT:**
 
    ```bash
-   docker compose up 
+   docker-compose up -d
    ```
 
 3. **CHẠY TỪNG SERVICE:**
