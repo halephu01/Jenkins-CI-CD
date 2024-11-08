@@ -2,59 +2,116 @@ pipeline {
     agent any
 
     environment {
-        SONARQUBE_SERVER = "SonarQube"
+        DOCKERHUB_USER = 'halephu01'
+        DOCKERHUB_PASS = credentials('Halephu0!234')
+        NETWORK_NAME = 'my-network'
     }
 
     stages {
-        stage('Clone') {
+        stage('Clone Repository') {
             steps {
-                git url: 'https://github.com/halephu01/Jenkins-CI-CD.git', branch: 'main'
+                git 'https://github.com/halephu01/Jenkins-CI-CD.git'
             }
         }
 
-        // stage('Code Quality Analysis') {
-        //     steps {
-        //         script {
-        //             withSonarQubeEnv('SonarQube') {
-        //                 sh 'sonar-scanner'
-        //             }
-        //         }
-        //     }
-        // }
-
-        stage('Docker Compose Up') {
+        stage('Docker Login') {
             steps {
                 script {
-                    sh 'docker compose up '
+                    sh "echo $DOCKERHUB_PASS | docker login -u $DOCKERHUB_USER --password-stdin"
                 }
             }
         }
 
-        stage('Run Microservices') {
+        stage('Run Docker Compose') {
             steps {
                 script {
-                    def services = ['api-gateway', 'identity-service', 'notification-service', 'order-service', 'product-service', 'inventory-service'] 
-                    services.each { service ->
-                        dir(service) {
-                            sh 'mvn spring-boot:run'
-                        }
-                    }
+                    sh 'docker-compose down || true'
+                    
+                    sh 'docker-compose up -d'
                 }
             }
         }
 
-        stage('Setup Frontend') {
+        stage('Pull and Run Services') {
             steps {
-                dir('frontend') {
-                    sh 'npm install'
-                    sh 'npm start & echo "Frontend is running at http://localhost:3500"'
+                script {
+                    sh '''
+                        docker rm -f api-gateway || true
+                        docker rm -f notification-service || true
+                        docker rm -f inventory-service || true
+                        docker rm -f order-service || true
+                        docker rm -f identity-service || true
+                        docker rm -f product-service || true
+                    '''
+                    
+                    sh '''
+                        # Pull images
+                        docker pull 4miby/api-gateway
+                        docker pull 4miby/notification-service
+                        docker pull 4miby/inventory-service
+                        docker pull 4miby/order-service
+                        docker pull 4miby/identity-service
+                        docker pull 4miby/product-service
+
+                        # Run containers
+                        docker run -d --name api-gateway \
+                            --network app-network \
+                            -p 9000:9000 \
+                            4miby/api-gateway
+
+                        docker run -d --name notification-service \
+                            --network app-network \
+                            -p 8083:8083 \
+                            4miby/notification-service
+
+                        docker run -d --name inventory-service \
+                            --network app-network \
+                            -p 8082:8082 \
+                            4miby/inventory-service
+
+                        docker run -d --name order-service \
+                            --network app-network \
+                            -p 8081:8081 \
+                            4miby/order-service
+
+                        docker run -d --name identity-service \
+                            --network app-network \
+                            -p 8087:8087 \
+                            4miby/identity-service
+
+                        docker run -d --name product-service \
+                            --network app-network \
+                            -p 8080:8080 \
+                            4miby/product-service
+                    '''
+                }
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                script {
+                    sh 'docker ps'
+                    sh 'docker-compose ps'
                 }
             }
         }
     }
+
     post {
         always {
-            cleanWs()
+            sh 'docker logout'
+        }
+        failure {
+            sh '''
+                docker-compose down
+                docker rm -f api-gateway || true
+                docker rm -f notification-service || true
+                docker rm -f inventory-service || true
+                docker rm -f order-service || true
+                docker rm -f identity-service || true
+                docker rm -f product-service || true
+            '''
         }
     }
 }
