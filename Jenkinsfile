@@ -96,6 +96,19 @@ pipeline {
                 }
             }
         }
+
+        stage('Deploy Frontend') {
+            steps {
+                script {
+                    sh '''
+                        cd frontend
+                        npm install
+                        npm start 
+                    '''
+                }
+            }
+        }
+
     }
 
     post {
