@@ -313,20 +313,17 @@ EOL
                 }
             }
         }
+    }
 
     post {
         always {
             script {
                 sh '''
                     echo "Performing cleanup..."
-                    # Kill frontend process if running
                     pkill -f "npm start" || true
-                    
-                    # Cleanup Docker resources
                     docker logout || true
                     docker-compose down --remove-orphans || true
                     docker system prune -f || true
-                    
                     echo "Cleanup complete"
                 '''
             }
