@@ -56,6 +56,67 @@ pipeline {
             }
         }
 
+        stage('Prepare Prometheus Config') {
+            steps {
+                script {
+                    sh '''
+                        # Tạo thư mục nếu chưa tồn tại
+                        mkdir -p docker/prometheus
+                        
+                        # Tạo file prometheus.yml
+                        cat > docker/prometheus/prometheus.yml << 'EOL'
+global:
+  scrape_interval: 2s
+  evaluation_interval: 2s
+
+scrape_configs:
+  - job_name: 'api-gateway'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['172.17.0.1:9000']
+        labels:
+          application: 'API Gateway'
+  - job_name: 'product-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['172.17.0.1:8080']
+        labels:
+          application: 'Product Service'
+  - job_name: 'order-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['172.17.0.1:8081']
+        labels:
+          application: 'Order Service'
+  - job_name: 'inventory-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['172.17.0.1:8082']
+        labels:
+          application: 'Inventory Service'
+  - job_name: 'notification-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['172.17.0.1:8083']
+        labels:
+          application: 'Notification Service'
+  - job_name: 'identity-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['172.17.0.1:8087']
+        labels:
+          application: 'Identity Service'
+EOL
+
+                        # Cấp quyền cho file
+                        chmod 644 docker/prometheus/prometheus.yml
+                        ls -la docker/prometheus/
+                        cat docker/prometheus/prometheus.yml
+                    '''
+                }
+            }
+        }
+
         stage('Run Docker Compose') {
             steps {
                 script {
@@ -63,12 +124,8 @@ pipeline {
                         sh '''
                             echo "Stopping and removing existing containers..."
                             docker-compose down || true
-                            
-                            # Xóa các containers cũ nếu có
-                            docker rm -f loki grafana tempo prometheus zookeeper mongodb mysql || true
-                            
-                            # Xóa network cũ nếu có
-                            docker network rm amibi_default || true
+                            docker rm -f $(docker ps -aq) || true
+                            docker network prune -f || true
                             
                             echo "Starting new containers..."
                             docker-compose up -d
@@ -78,7 +135,6 @@ pipeline {
                             
                             echo "Checking container status..."
                             docker-compose ps
-                            docker ps
                         '''
                     } catch (Exception e) {
                         echo "Error in Docker Compose stage: ${e.getMessage()}"
@@ -189,12 +245,14 @@ pipeline {
             '''
         }
         failure {
-            sh '''
-                echo "Pipeline failed! Cleaning up..."
-                docker-compose down || true
-                docker rm -f api-gateway notification-service inventory-service order-service identity-service product-service || true
-                docker network rm app-network || true
-            '''
+            script {
+                sh '''
+                    echo "Pipeline failed! Cleaning up..."
+                    docker-compose down || true
+                    docker rm -f $(docker ps -aq) || true
+                    docker network prune -f || true
+                '''
+            }
         }
         success {
             echo "Pipeline completed successfully!"

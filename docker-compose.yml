@@ -91,11 +91,14 @@ services:
       - --config.file=/etc/prometheus/prometheus.yml
       - --web.enable-lifecycle
     volumes:
-      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - type: bind
+        source: ./docker/prometheus/prometheus.yml
+        target: /etc/prometheus/prometheus.yml
+        read_only: true
     ports:
       - "9090:9090"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    networks:
+      - amibi-network
 
   tempo:
     image: grafana/tempo:2.2.2
