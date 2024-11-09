@@ -314,30 +314,30 @@ EOL
                 }
             }
         }
+    }
 
-        post {
-            always {
-                script {
-                    sh '''
-                        echo "Performing cleanup..."
-                        pkill -f "npm start" || true
-                        docker-compose down --remove-orphans || true
-                        docker system prune -f || true
-                        docker network rm ${DOCKER_NETWORK} || true
-                        echo "Cleanup complete"
-                    '''
-                }
-            }
-            failure {
-                script {
-                    sh '''
-                        echo "Deployment failed! Collecting logs..."
-                        docker-compose logs > docker-compose.log
-                        tar czf logs.tar.gz docker-compose.log frontend/npm-debug.log* || true
-                    '''
-                    archiveArtifacts artifacts: 'logs.tar.gz', allowEmptyArchive: true
-                }
+    post {
+        always {
+            script {
+                sh '''
+                    echo "Performing cleanup..."
+                    pkill -f "npm start" || true
+                    docker-compose down --remove-orphans || true
+                    docker system prune -f || true
+                    docker network rm ${DOCKER_NETWORK} || true
+                    echo "Cleanup complete"
+                '''
             }
         }
-    }  
+        failure {
+            script {
+                sh '''
+                    echo "Deployment failed! Collecting logs..."
+                    docker-compose logs > docker-compose.log
+                    tar czf logs.tar.gz docker-compose.log frontend/npm-debug.log* || true
+                '''
+                archiveArtifacts artifacts: 'logs.tar.gz', allowEmptyArchive: true
+            }
+        }
+    }
 } 
