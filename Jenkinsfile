@@ -56,10 +56,13 @@ pipeline {
                         # Tạo file prometheus.yml
                         cat > docker/prometheus/prometheus.yml << EOL
 global:
-  scrape_interval: 2s
-  evaluation_interval: 2s
+  scrape_interval: 15s
+  evaluation_interval: 15s
 
 scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
   - job_name: 'api-gateway'
     metrics_path: '/actuator/prometheus'
     static_configs:
@@ -116,23 +119,22 @@ EOL
                                 exit 1
                             fi
                             
-                            # Create network first
-                            docker network create ${DOCKER_NETWORK} || true
+                            # Remove existing network if exists
+                            docker network rm ${DOCKER_NETWORK} || true
+                            
+                            # Create network
+                            docker network create ${DOCKER_NETWORK}
                             
                             # Cleanup existing containers
                             echo "Cleaning up existing containers..."
                             docker compose down --remove-orphans || true
                             docker system prune -f || true
                             
-                            # Start services with specific network
+                            # Start services
                             echo "Starting services..."
-                            COMPOSE_PROJECT_NAME=amibi docker-compose up -d
+                            DOCKER_NETWORK=${DOCKER_NETWORK} docker compose up 
                             
-                            # Wait for services to start
-                            echo "Waiting for services to start..."
-                            sleep 30
-                            
-                            # Check services status
+                            # Verify services are running
                             echo "Checking service status..."
                             docker compose ps
                         '''
@@ -322,7 +324,7 @@ EOL
                 sh '''
                     echo "Performing cleanup..."
                     pkill -f "npm start" || true
-                    docker-compose down --remove-orphans || true
+                    docker compose down --remove-orphans || true
                     docker system prune -f || true
                     docker network rm ${DOCKER_NETWORK} || true
                     echo "Cleanup complete"
@@ -333,7 +335,7 @@ EOL
             script {
                 sh '''
                     echo "Deployment failed! Collecting logs..."
-                    docker-compose logs > docker-compose.log
+                    docker compose logs > docker-compose.log
                     tar czf logs.tar.gz docker-compose.log frontend/npm-debug.log* || true
                 '''
                 archiveArtifacts artifacts: 'logs.tar.gz', allowEmptyArchive: true
