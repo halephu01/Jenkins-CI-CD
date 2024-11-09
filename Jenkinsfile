@@ -83,15 +83,15 @@ EOL
                             docker network rm amibi-network || true
                             
                             # Tạo network mới
-                            docker network create amibi-network
+                            docker network create amibi-network || true
                             
                             # Kiểm tra cấu hình Prometheus
                             echo "Checking Prometheus config..."
                             ls -la docker/prometheus/
                             cat docker/prometheus/prometheus.yml
                             
-                            # Khởi động services
-                            docker compose up 
+                            # Khởi động services với detach mode
+                            docker compose up -d
                         '''
                     } catch (Exception e) {
                         error "Docker Compose failed: ${e.getMessage()}"
