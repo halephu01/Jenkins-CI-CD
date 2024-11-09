@@ -48,9 +48,11 @@ pipeline {
             steps {
                 script {
                     sh '''
+                        # Tạo thư mục
                         mkdir -p docker/prometheus
-                        DOCKER_HOST_IP=$(echo 172.17.0.1)
-                        cat > docker/prometheus/prometheus.yml << 'EOL'
+                        
+                        # Tạo file cấu hình
+                        cat > docker/prometheus/prometheus.yml << 'EOF'
                         global:
                           scrape_interval: 15s
                           evaluation_interval: 15s
@@ -59,9 +61,14 @@ pipeline {
                           - job_name: 'prometheus'
                             static_configs:
                               - targets: ['localhost:9090']
-                        EOL
+                        EOF
+
+                        # Kiểm tra file đã được tạo
+                        ls -la docker/prometheus/
+                        cat docker/prometheus/prometheus.yml
+                        
+                        # Đặt quyền cho file
                         chmod 644 docker/prometheus/prometheus.yml
-                        chown jenkins:jenkins docker/prometheus/prometheus.yml
                     '''
                 }
             }
@@ -72,35 +79,16 @@ pipeline {
                 script {
                     try {
                         sh '''
-                            # Check if docker-compose.yml exists
-                            if [ ! -f docker-compose.yml ]; then
-                                echo "Error: docker-compose.yml not found"
-                                exit 1
-                            fi
+                            # Kiểm tra file và thư mục
+                            echo "Checking Prometheus config..."
+                            ls -la docker/prometheus/
+                            cat docker/prometheus/prometheus.yml
                             
-                            # Clean up existing containers and networks
-                            echo "Cleaning up existing containers..."
-                            docker compose down --volumes --remove-orphans || true
-                            docker system prune -f || true
-                            
-                            # Start services
-                            echo "Starting services..."
-                            COMPOSE_PROJECT_NAME=amibi docker compose up -d
-                            
-                            # Verify services are running
-                            echo "Checking service status..."
-                            docker compose ps
+                            # Khởi động services
+                            docker compose up
                         '''
                     } catch (Exception e) {
-                        echo "Error in Docker Compose stage: ${e.getMessage()}"
-                        sh '''
-                            echo "Error occurred. Collecting diagnostics..."
-                            docker ps -a
-                            docker network ls
-                            docker volume ls
-                            docker compose logs || true
-                        '''
-                        error("Docker Compose stage failed")
+                        error "Docker Compose failed: ${e.getMessage()}"
                     }
                 }
             }
@@ -259,7 +247,7 @@ pipeline {
                             check_health "http://localhost:8082/actuator/health" "Inventory Service"
                             check_health "http://localhost:8083/actuator/health" "Notification Service"
                             check_health "http://localhost:8087/actuator/health" "Identity Service"
-                            check_health "http://localhost:3000" "Frontend"
+                            check_health "http://localhost:3500" "Frontend"
                             
                             echo "Health checks completed"
                         '''
