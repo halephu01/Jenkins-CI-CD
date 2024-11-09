@@ -7,6 +7,15 @@ pipeline {
     }
 
     stages {
+        stage('Checkout') {
+            steps {
+                cleanWs()
+                
+                git branch: 'main',
+                    url: 'https://github.com/halephu01/Jenkins-CI-CD.git'
+            }
+        }
+
         stage('Check Environment') {
             steps {
                 script {
@@ -254,16 +263,7 @@ EOL
 
     post {
         always {
-            script {
-                sh '''
-                    echo "Performing cleanup..."
-                    pkill -f "npm start" || true
-                    docker compose down --remove-orphans || true
-                    docker system prune -f || true
-                    docker network rm ${DOCKER_NETWORK} || true
-                    echo "Cleanup complete"
-                '''
-            }
+            cleanWs()
         }
         failure {
             script {
