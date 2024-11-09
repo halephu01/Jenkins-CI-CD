@@ -11,6 +11,9 @@ pipeline {
         stage('Clone Repository') {
             steps {
                 git branch:'main', url: 'https://github.com/halephu01/Jenkins-CI-CD.git'
+                script {
+                    sh 'ls -la'
+                }
             }
         }
 
@@ -18,6 +21,7 @@ pipeline {
             steps {
                 script {
                     sh "echo $DOCKERHUB_PASS | docker login -u $DOCKERHUB_USER --password-stdin"
+                    sh "docker info"
                 }
             }
         }
@@ -26,8 +30,9 @@ pipeline {
             steps {
                 script {
                     sh 'docker-compose down || true'
-                    
                     sh 'docker-compose up -d'
+                    sh 'docker-compose ps'
+                    sh 'docker network ls'
                 }
             }
         }
@@ -42,9 +47,10 @@ pipeline {
                         docker rm -f order-service || true
                         docker rm -f identity-service || true
                         docker rm -f product-service || true
-                    '''
-                    
-                    sh '''
+                        docker rm -f inventory-service || true
+                        docker rm -f api-gateway || true
+                        docker rm -f notification-service || true
+                        
                         # Pull images
                         docker pull 4miby/api-gateway
                         docker pull 4miby/notification-service
@@ -52,7 +58,10 @@ pipeline {
                         docker pull 4miby/order-service
                         docker pull 4miby/identity-service
                         docker pull 4miby/product-service
-
+                        
+                        # Verify images were pulled
+                        docker images | grep 4miby
+                        
                         # Run containers
                         docker run -d --name api-gateway \
                             --network app-network \
@@ -83,6 +92,9 @@ pipeline {
                             --network app-network \
                             -p 8080:8080 \
                             4miby/product-service
+                        
+                        # Verify containers are running
+                        docker ps --format "{{.Names}}: {{.Status}}"
                     '''
                 }
             }
@@ -102,8 +114,14 @@ pipeline {
                 script {
                     sh '''
                         cd frontend
+                        pwd
+                        ls -la
+                        npm -v
+                        node -v
                         npm install
-                        npm start 
+                        npm start &
+                        sleep 10
+                        curl -s http://localhost:3000 || echo "Frontend chưa sẵn sàng"
                     '''
                 }
             }
