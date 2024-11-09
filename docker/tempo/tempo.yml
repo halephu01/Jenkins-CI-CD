@@ -4,9 +4,23 @@ server:
 distributor:
   receivers:
     zipkin:
+      endpoint: "0.0.0.0:9411"
 
 storage:
   trace:
     backend: local
     local:
       path: /tmp/tempo/blocks
+
+ingester:
+  max_block_duration: 5m
+
+compactor:
+  compaction:
+    block_retention: 48h
+
+metrics_generator:
+  registry:
+    external_labels:
+      source: tempo
+      cluster: docker-compose

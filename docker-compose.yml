@@ -120,7 +120,7 @@ services:
 volumes:
   mongodb_data:
   mysql_data:
-  tempo_data:
+  tempo-data:
 
 networks:
   amibi-network:
