@@ -116,23 +116,25 @@ EOL
                                 exit 1
                             fi
                             
-                            # Cleanup
+                            # Create network first
+                            docker network create ${DOCKER_NETWORK} || true
+                            
+                            # Cleanup existing containers
                             echo "Cleaning up existing containers..."
-                            docker-compose down --remove-orphans || true
+                            docker compose down --remove-orphans || true
                             docker system prune -f || true
                             
-                            # Start services
+                            # Start services with specific network
                             echo "Starting services..."
-                            docker compose up 
+                            COMPOSE_PROJECT_NAME=amibi docker-compose up -d
                             
-                            # Wait for services
+                            # Wait for services to start
                             echo "Waiting for services to start..."
                             sleep 30
                             
-                            # Check services
+                            # Check services status
                             echo "Checking service status..."
                             docker compose ps
-                            docker compose logs --tail=100
                         '''
                     } catch (Exception e) {
                         echo "Error in Docker Compose stage: ${e.getMessage()}"
@@ -143,7 +145,6 @@ EOL
                             docker volume ls
                             docker compose logs || true
                         '''
-                        currentBuild.result = 'FAILURE'
                         error("Docker Compose stage failed")
                     }
                 }
@@ -313,17 +314,20 @@ EOL
                 }
             }
         }
-    }
 
     post {
         always {
             script {
                 sh '''
                     echo "Performing cleanup..."
+                    # Kill frontend process if running
                     pkill -f "npm start" || true
+                    
+                    # Cleanup Docker resources
                     docker logout || true
                     docker-compose down --remove-orphans || true
                     docker system prune -f || true
+                    
                     echo "Cleanup complete"
                 '''
             }
