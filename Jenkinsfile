@@ -119,20 +119,14 @@ EOL
                                 exit 1
                             fi
                             
-                            # Create network if it doesn't exist
-                            if ! docker network inspect amibi-network >/dev/null 2>&1; then
-                                echo "Creating Docker network..."
-                                docker network create amibi-network
-                            fi
-                            
-                            # Clean up existing containers
+                            # Clean up existing containers and networks
                             echo "Cleaning up existing containers..."
-                            COMPOSE_PROJECT_NAME=amibi docker compose down --remove-orphans || true
+                            docker compose down --volumes --remove-orphans || true
                             docker system prune -f || true
                             
-                            # Start services with specific project name
+                            # Start services
                             echo "Starting services..."
-                            COMPOSE_PROJECT_NAME=amibi DOCKER_NETWORK=amibi-network docker compose up -d
+                            COMPOSE_PROJECT_NAME=amibi docker compose up -d
                             
                             # Verify services are running
                             echo "Checking service status..."

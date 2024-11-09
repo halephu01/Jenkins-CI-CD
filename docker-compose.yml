@@ -131,4 +131,4 @@ networks:
     driver: bridge
   amibi-network:
     name: amibi-network
-    external: true
+    driver: bridge
