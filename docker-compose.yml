@@ -97,12 +97,11 @@ services:
       - '--web.console.templates=/usr/share/prometheus/consoles'
 
   tempo:
-    image: grafana/tempo:2.2.2
-    container_name: tempo
-    command: ["-config.file=/etc/tempo.yaml"]
+    image: grafana/tempo:latest
+    command: [ "-config.file=/etc/tempo/tempo.yml" ]
     volumes:
-      - ./docker/tempo/tempo.yml:/etc/tempo.yaml:ro
-      - tempo_data:/tmp/tempo
+      - ./docker/tempo/tempo.yml:/etc/tempo/tempo.yml
+      - tempo-data:/tmp/tempo
     ports:
       - "3110:3100"  # Tempo
       - "9411:9411" # zipkin
