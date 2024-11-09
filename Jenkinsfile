@@ -9,18 +9,47 @@ pipeline {
     }
 
     stages {
+        stage('Check Environment') {
+            steps {
+                script {
+                    try {
+                        sh '''
+                            echo "Checking environment..."
+                            docker --version
+                            docker-compose --version
+                            node --version
+                            npm --version
+                            whoami
+                            groups
+                            
+                            # Kiểm tra quyền Docker
+                            docker ps
+                        '''
+                    } catch (Exception e) {
+                        error "Environment check failed: ${e.getMessage()}"
+                    }
+                }
+            }
+        }
+
         stage('Checkout') {
             steps {
-                cleanWs()
-                
-                git branch: "${BRANCH}",
-                    url: "${GITHUB_REPO}"
-                
-                sh '''
-                    echo "Checked out branch: ${BRANCH}"
-                    echo "Current directory content:"
-                    ls -la
-                '''
+                script {
+                    try {
+                        cleanWs()
+                        
+                        git branch: "${BRANCH}",
+                            url: "${GITHUB_REPO}"
+                        
+                        sh '''
+                            echo "Checked out branch: ${BRANCH}"
+                            echo "Current directory content:"
+                            ls -la
+                        '''
+                    } catch (Exception e) {
+                        error "Checkout failed: ${e.getMessage()}"
+                    }
+                }
             }
         }
 
@@ -29,22 +58,28 @@ pipeline {
                 script {
                     try {
                         sh '''
-                            # Dừng và xóa các containers cũ nếu có
+                            # Kiểm tra Docker daemon
+                            docker info
+                            
+                            # Dừng và xóa containers cũ
                             docker compose down --remove-orphans || true
                             
-                            # Xóa network cũ nếu có
-                            docker network rm ${DOCKER_NETWORK} || true
+                            # Cleanup networks
+                            docker network prune -f
                             
-                            # Tạo network mới
-                            docker network create ${DOCKER_NETWORK} || true
+                            # Tạo network mới nếu chưa tồn tại
+                            docker network inspect ${DOCKER_NETWORK} >/dev/null 2>&1 || \
+                            docker network create ${DOCKER_NETWORK}
                             
-                            # Chạy docker compose
-                            DOCKER_NETWORK=${DOCKER_NETWORK} docker compose up -d
+                            # Build và start services
+                            DOCKER_NETWORK=${DOCKER_NETWORK} COMPOSE_HTTP_TIMEOUT=200 docker compose up -d --build
                             
-                            # Hiển thị trạng thái các containers
+                            # Kiểm tra trạng thái
                             docker compose ps
+                            docker compose logs
                         '''
                     } catch (Exception e) {
+                        sh 'docker compose logs'
                         error "Docker Compose failed: ${e.getMessage()}"
                     }
                 }
@@ -59,49 +94,26 @@ pipeline {
                             # Login to Docker Hub
                             echo ${DOCKERHUB_CREDENTIALS_PSW} | docker login -u ${DOCKERHUB_CREDENTIALS_USR} --password-stdin
                             
-                            # Pull và chạy các services
-                            # API Gateway
-                            docker pull 4miby/api-gateway:latest
-                            docker run -d --name api-gateway \
-                                --network ${DOCKER_NETWORK} \
-                                -p 9000:9000 \
-                                4miby/api-gateway:latest
-
-                            # Product Service
-                            docker pull 4miby/product-service:latest
-                            docker run -d --name product-service \
-                                --network ${DOCKER_NETWORK} \
-                                -p 8080:8080 \
-                                4miby/product-service:latest
-
-                            # Order Service
-                            docker pull 4miby/order-service:latest
-                            docker run -d --name order-service \
-                                --network ${DOCKER_NETWORK} \
-                                -p 8081:8081 \
-                                4miby/order-service:latest
-
-                            # Inventory Service
-                            docker pull 4miby/inventory-service:latest
-                            docker run -d --name inventory-service \
-                                --network ${DOCKER_NETWORK} \
-                                -p 8082:8082 \
-                                4miby/inventory-service:latest
-
-                            # Notification Service
-                            docker pull 4miby/notification-service:latest
-                            docker run -d --name notification-service \
-                                --network ${DOCKER_NETWORK} \
-                                -p 8083:8083 \
-                                4miby/notification-service:latest
-
-                            # Identity Service
-                            docker pull 4miby/identity-service:latest
-                            docker run -d --name identity-service \
-                                --network ${DOCKER_NETWORK} \
-                                -p 8087:8087 \
-                                4miby/identity-service:latest
-
+                            # Function để pull và run container
+                            deploy_service() {
+                                local name=$1
+                                local port=$2
+                                echo "Deploying ${name}..."
+                                docker pull 4miby/${name}:latest
+                                docker run -d --name ${name} \
+                                    --network ${DOCKER_NETWORK} \
+                                    -p ${port}:${port} \
+                                    4miby/${name}:latest
+                            }
+                            
+                            # Deploy các services
+                            deploy_service "api-gateway" "9000"
+                            deploy_service "product-service" "8080"
+                            deploy_service "order-service" "8081"
+                            deploy_service "inventory-service" "8082"
+                            deploy_service "notification-service" "8083"
+                            deploy_service "identity-service" "8087"
+                            
                             # Kiểm tra trạng thái
                             docker ps -a
                         '''
@@ -118,17 +130,11 @@ pipeline {
                     try {
                         sh '''
                             # Kiểm tra Node.js
-                            echo "Checking Node.js installation..."
-                            if ! command -v node &> /dev/null; then
-                                echo "Installing Node.js..."
-                                curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-                                apt-get install -y nodejs
-                            fi
+                            echo "Node version: $(node --version)"
+                            echo "NPM version: $(npm --version)"
                             
                             # Di chuyển vào thư mục frontend
                             cd frontend
-                            
-                            # Hiển thị thư mục hiện tại
                             echo "Current directory: $(pwd)"
                             ls -la
                             
@@ -136,16 +142,20 @@ pipeline {
                             echo "Installing dependencies..."
                             npm install
                             
+                            # Build ứng dụng (nếu cần)
+                            echo "Building application..."
+                            npm run build
+                            
                             # Chạy ứng dụng
                             echo "Starting frontend application..."
-                            npm start &
+                            nohup npm start > frontend.log 2>&1 &
                             
-                            # Đợi frontend khởi động
-                            echo "Waiting for frontend to start..."
+                            # Đợi ứng dụng khởi động
                             sleep 30
                             
                             # Kiểm tra process
                             ps aux | grep npm
+                            cat frontend.log
                         '''
                     } catch (Exception e) {
                         error "Frontend setup failed: ${e.getMessage()}"
@@ -160,12 +170,19 @@ pipeline {
             cleanWs()
         }
         
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        
         failure {
             script {
                 sh '''
                     echo "Deployment failed! Collecting logs..."
-                    docker compose logs > docker-compose.log
-                    tar czf logs.tar.gz docker-compose.log frontend/npm-debug.log* || true
+                    mkdir -p logs
+                    docker compose logs > logs/docker-compose.log
+                    docker ps -a > logs/containers.log
+                    docker network ls > logs/networks.log
+                    tar czf logs.tar.gz logs/
                 '''
                 archiveArtifacts artifacts: 'logs.tar.gz', allowEmptyArchive: true
             }
