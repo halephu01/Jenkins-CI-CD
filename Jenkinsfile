@@ -113,26 +113,26 @@ EOL
                 script {
                     try {
                         sh '''
-                            # Ensure docker-compose.yml exists
+                            # Check if docker-compose.yml exists
                             if [ ! -f docker-compose.yml ]; then
                                 echo "Error: docker-compose.yml not found"
                                 exit 1
                             fi
                             
-                            # Remove existing network if exists
-                            docker network rm ${DOCKER_NETWORK} || true
+                            # Create network if it doesn't exist
+                            if ! docker network inspect amibi-network >/dev/null 2>&1; then
+                                echo "Creating Docker network..."
+                                docker network create amibi-network
+                            fi
                             
-                            # Create network
-                            docker network create ${DOCKER_NETWORK}
-                            
-                            # Cleanup existing containers
+                            # Clean up existing containers
                             echo "Cleaning up existing containers..."
-                            docker compose down --remove-orphans || true
+                            COMPOSE_PROJECT_NAME=amibi docker compose down --remove-orphans || true
                             docker system prune -f || true
                             
-                            # Start services
+                            # Start services with specific project name
                             echo "Starting services..."
-                            DOCKER_NETWORK=${DOCKER_NETWORK} docker compose up 
+                            COMPOSE_PROJECT_NAME=amibi DOCKER_NETWORK=amibi-network docker compose up -d
                             
                             # Verify services are running
                             echo "Checking service status..."
