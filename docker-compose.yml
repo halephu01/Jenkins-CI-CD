@@ -124,6 +124,5 @@ volumes:
   tempo_data:
 
 networks:
-  default:
-    name: amibi-network
-    driver: bridge
+  amibi-network:
+    external: true

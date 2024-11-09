@@ -12,10 +12,9 @@ pipeline {
                 script {
                     sh '''
                         echo "Checking Docker..."
-                        if ! command -v docker &> /dev/null; then
-                            echo "Docker not found. Installing Docker..."
-                            curl -fsSL https://get.docker.com -o get-docker.sh
-                            sh get-docker.sh
+                        if ! docker info &> /dev/null; then
+                            echo "Docker daemon is not running"
+                            exit 1
                         fi
                         
                         echo "Checking Docker Compose..."
@@ -23,19 +22,6 @@ pipeline {
                             echo "Docker Compose not found. Installing Docker Compose..."
                             curl -L "https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
                             chmod +x /usr/local/bin/docker-compose
-                        fi
-                        
-                        # Start Docker daemon if not running (for non-systemd systems)
-                        if ! docker info &> /dev/null; then
-                            echo "Starting Docker daemon..."
-                            dockerd &
-                            sleep 10
-                        fi
-                        
-                        # Create Docker network if not exists
-                        if ! docker network ls | grep -q "${DOCKER_NETWORK}"; then
-                            echo "Creating Docker network..."
-                            docker network create ${DOCKER_NETWORK} || true
                         fi
                         
                         echo "Environment check complete"
@@ -79,10 +65,11 @@ EOL
                 script {
                     try {
                         sh '''
-                            # Xóa network cũ nếu tồn tại
+                            # Cleanup existing resources
+                            docker compose down --remove-orphans || true
                             docker network rm amibi-network || true
                             
-                            # Tạo network mới
+                            # Create network
                             docker network create amibi-network || true
                             
                             # Kiểm tra cấu hình Prometheus
@@ -91,7 +78,7 @@ EOL
                             cat docker/prometheus/prometheus.yml
                             
                             # Khởi động services với detach mode
-                            docker compose up -d
+                            DOCKER_NETWORK=amibi-network docker compose up -d
                         '''
                     } catch (Exception e) {
                         error "Docker Compose failed: ${e.getMessage()}"
