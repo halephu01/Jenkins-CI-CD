@@ -51,23 +51,23 @@ pipeline {
                         # Tạo thư mục
                         mkdir -p docker/prometheus
                         
-                        # Tạo file cấu hình
-                        cat > docker/prometheus/prometheus.yml << 'EOF'
-                        global:
-                          scrape_interval: 15s
-                          evaluation_interval: 15s
+                        # Tạo file cấu hình prometheus.yml
+                        cat > docker/prometheus/prometheus.yml << 'EOL'
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
 
-                        scrape_configs:
-                          - job_name: 'prometheus'
-                            static_configs:
-                              - targets: ['localhost:9090']
-                        EOF
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+EOL
 
-                        # Kiểm tra file đã được tạo
+                        # Kiểm tra file
                         ls -la docker/prometheus/
                         cat docker/prometheus/prometheus.yml
                         
-                        # Đặt quyền cho file
+                        # Đặt quyền
                         chmod 644 docker/prometheus/prometheus.yml
                     '''
                 }
@@ -79,13 +79,19 @@ pipeline {
                 script {
                     try {
                         sh '''
-                            # Kiểm tra file và thư mục
+                            # Xóa network cũ nếu tồn tại
+                            docker network rm amibi-network || true
+                            
+                            # Tạo network mới
+                            docker network create amibi-network
+                            
+                            # Kiểm tra cấu hình Prometheus
                             echo "Checking Prometheus config..."
                             ls -la docker/prometheus/
                             cat docker/prometheus/prometheus.yml
                             
                             # Khởi động services
-                            docker compose up
+                            docker compose up 
                         '''
                     } catch (Exception e) {
                         error "Docker Compose failed: ${e.getMessage()}"

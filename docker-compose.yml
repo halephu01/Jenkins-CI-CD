@@ -127,8 +127,5 @@ volumes:
 
 networks:
   default:
-    name: amibi_network
-    driver: bridge
-  amibi-network:
     name: amibi-network
     driver: bridge
