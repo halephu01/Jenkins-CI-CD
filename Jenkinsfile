@@ -320,28 +320,11 @@ EOL
             script {
                 sh '''
                     echo "Performing cleanup..."
-                    # Kill frontend process if running
                     pkill -f "npm start" || true
-                    
-                    # Cleanup Docker resources
-                    docker logout || true
                     docker-compose down --remove-orphans || true
                     docker system prune -f || true
-                    
+                    docker network rm ${DOCKER_NETWORK} || true
                     echo "Cleanup complete"
-                '''
-            }
-        }
-        success {
-            script {
-                sh '''
-                    echo "Deployment successful!"
-                    echo "Services are running at:"
-                    echo "Frontend: http://localhost:3000"
-                    echo "API Gateway: http://localhost:9000"
-                    echo "Grafana: http://localhost:3000"
-                    echo "Prometheus: http://localhost:9090"
-                    echo "Kafka UI: http://localhost:8086"
                 '''
             }
         }
