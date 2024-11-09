@@ -59,10 +59,32 @@ pipeline {
         stage('Run Docker Compose') {
             steps {
                 script {
-                    sh 'docker-compose down || true'
-                    sh 'docker-compose up -d'
-                    sh 'docker-compose ps'
-                    sh 'docker network ls'
+                    try {
+                        sh '''
+                            echo "Stopping and removing existing containers..."
+                            docker-compose down || true
+                            
+                            # Xóa các containers cũ nếu có
+                            docker rm -f loki grafana tempo prometheus zookeeper mongodb mysql || true
+                            
+                            # Xóa network cũ nếu có
+                            docker network rm amibi_default || true
+                            
+                            echo "Starting new containers..."
+                            docker-compose up -d
+                            
+                            echo "Waiting for containers to start..."
+                            sleep 30
+                            
+                            echo "Checking container status..."
+                            docker-compose ps
+                            docker ps
+                        '''
+                    } catch (Exception e) {
+                        echo "Error in Docker Compose stage: ${e.getMessage()}"
+                        currentBuild.result = 'FAILURE'
+                        error("Docker Compose stage failed")
+                    }
                 }
             }
         }
@@ -70,62 +92,62 @@ pipeline {
         stage('Pull and Run Services') {
             steps {
                 script {
-                    sh '''
-                        docker rm -f api-gateway || true
-                        docker rm -f notification-service || true
-                        docker rm -f inventory-service || true
-                        docker rm -f order-service || true
-                        docker rm -f identity-service || true
-                        docker rm -f product-service || true
-                        docker rm -f inventory-service || true
-                        docker rm -f api-gateway || true
-                        docker rm -f notification-service || true
-                        
-                        # Pull images
-                        docker pull 4miby/api-gateway
-                        docker pull 4miby/notification-service
-                        docker pull 4miby/inventory-service
-                        docker pull 4miby/order-service
-                        docker pull 4miby/identity-service
-                        docker pull 4miby/product-service
-                        
-                        # Verify images were pulled
-                        docker images | grep 4miby
-                        
-                        # Run containers
-                        docker run -d --name api-gateway \
-                            --network app-network \
-                            -p 9000:9000 \
-                            4miby/api-gateway
+                    try {
+                        sh '''
+                            # Remove existing containers if any
+                            docker rm -f api-gateway notification-service inventory-service order-service identity-service product-service || true
+                            
+                            # Pull images
+                            docker pull 4miby/api-gateway
+                            docker pull 4miby/notification-service
+                            docker pull 4miby/inventory-service
+                            docker pull 4miby/order-service
+                            docker pull 4miby/identity-service
+                            docker pull 4miby/product-service
+                            
+                            # Create network if not exists
+                            docker network create app-network || true
+                            
+                            # Run containers
+                            docker run -d --name api-gateway \
+                                --network app-network \
+                                -p 9000:9000 \
+                                4miby/api-gateway
 
-                        docker run -d --name notification-service \
-                            --network app-network \
-                            -p 8083:8083 \
-                            4miby/notification-service
+                            docker run -d --name notification-service \
+                                --network app-network \
+                                -p 8083:8083 \
+                                4miby/notification-service
 
-                        docker run -d --name inventory-service \
-                            --network app-network \
-                            -p 8082:8082 \
-                            4miby/inventory-service
+                            docker run -d --name inventory-service \
+                                --network app-network \
+                                -p 8082:8082 \
+                                4miby/inventory-service
 
-                        docker run -d --name order-service \
-                            --network app-network \
-                            -p 8081:8081 \
-                            4miby/order-service
+                            docker run -d --name order-service \
+                                --network app-network \
+                                -p 8081:8081 \
+                                4miby/order-service
 
-                        docker run -d --name identity-service \
-                            --network app-network \
-                            -p 8087:8087 \
-                            4miby/identity-service
+                            docker run -d --name identity-service \
+                                --network app-network \
+                                -p 8087:8087 \
+                                4miby/identity-service
 
-                        docker run -d --name product-service \
-                            --network app-network \
-                            -p 8080:8080 \
-                            4miby/product-service
-                        
-                        # Verify containers are running
-                        docker ps --format "{{.Names}}: {{.Status}}"
-                    '''
+                            docker run -d --name product-service \
+                                --network app-network \
+                                -p 8080:8080 \
+                                4miby/product-service
+                            
+                            # Verify containers are running
+                            echo "Checking service status..."
+                            docker ps --format "{{.Names}}: {{.Status}}"
+                        '''
+                    } catch (Exception e) {
+                        echo "Error in Pull and Run Services stage: ${e.getMessage()}"
+                        currentBuild.result = 'FAILURE'
+                        error("Pull and Run Services stage failed")
+                    }
                 }
             }
         }
@@ -161,18 +183,21 @@ pipeline {
 
     post {
         always {
-            sh 'docker logout'
+            sh '''
+                echo "Cleaning up..."
+                docker logout || true
+            '''
+        }
+        failure {
+            sh '''
+                echo "Pipeline failed! Cleaning up..."
+                docker-compose down || true
+                docker rm -f api-gateway notification-service inventory-service order-service identity-service product-service || true
+                docker network rm app-network || true
+            '''
         }
         success {
             echo "Pipeline completed successfully!"
-        }
-        failure {
-            echo "Pipeline failed! Check the logs above for details."
-            sh '''
-                echo "Cleaning up containers..."
-                docker-compose down || true
-                docker rm -f api-gateway notification-service inventory-service order-service identity-service product-service || true
-            '''
         }
     }
 }
