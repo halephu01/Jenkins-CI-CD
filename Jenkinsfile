@@ -4,6 +4,8 @@ pipeline {
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
         DOCKER_NETWORK = 'amibi-network'
+        GITHUB_REPO = 'https://github.com/halephu01/Jenkins-CI-CD.git'
+        BRANCH = 'main'
     }
 
     stages {
@@ -11,83 +13,36 @@ pipeline {
             steps {
                 cleanWs()
                 
-                git branch: 'main',
-                    url: 'https://github.com/halephu01/Jenkins-CI-CD.git'
+                git branch: "${BRANCH}",
+                    url: "${GITHUB_REPO}"
+                
+                sh '''
+                    echo "Checked out branch: ${BRANCH}"
+                    echo "Current directory content:"
+                    ls -la
+                '''
             }
         }
 
-        stage('Check Environment') {
-            steps {
-                script {
-                    sh '''
-                        echo "Checking Docker..."
-                        if ! docker info &> /dev/null; then
-                            echo "Docker daemon is not running"
-                            exit 1
-                        fi
-                        
-                        echo "Checking Docker Compose..."
-                        if ! command -v docker-compose &> /dev/null; then
-                            echo "Docker Compose not found. Installing Docker Compose..."
-                            curl -L "https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-                            chmod +x /usr/local/bin/docker-compose
-                        fi
-                        
-                        echo "Environment check complete"
-                    '''
-                }
-            }
-        }
-
-        stage('Prepare Prometheus Config') {
-            steps {
-                script {
-                    sh '''
-                        # Tạo thư mục
-                        mkdir -p docker/prometheus
-                        
-                        # Tạo file cấu hình prometheus.yml
-                        cat > docker/prometheus/prometheus.yml << 'EOL'
-global:
-  scrape_interval: 15s
-  evaluation_interval: 15s
-
-scrape_configs:
-  - job_name: 'prometheus'
-    static_configs:
-      - targets: ['localhost:9090']
-EOL
-
-                        # Kiểm tra file
-                        ls -la docker/prometheus/
-                        cat docker/prometheus/prometheus.yml
-                        
-                        # Đặt quyền
-                        chmod 644 docker/prometheus/prometheus.yml
-                    '''
-                }
-            }
-        }
-
-        stage('Run Docker Compose') {
+        stage('Docker Compose Up') {
             steps {
                 script {
                     try {
                         sh '''
-                            # Cleanup existing resources
+                            # Dừng và xóa các containers cũ nếu có
                             docker compose down --remove-orphans || true
-                            docker network rm amibi-network || true
                             
-                            # Create network
-                            docker network create amibi-network || true
+                            # Xóa network cũ nếu có
+                            docker network rm ${DOCKER_NETWORK} || true
                             
-                            # Kiểm tra cấu hình Prometheus
-                            echo "Checking Prometheus config..."
-                            ls -la docker/prometheus/
-                            cat docker/prometheus/prometheus.yml
+                            # Tạo network mới
+                            docker network create ${DOCKER_NETWORK} || true
                             
-                            # Khởi động services với detach mode
-                            DOCKER_NETWORK=amibi-network docker compose up -d
+                            # Chạy docker compose
+                            DOCKER_NETWORK=${DOCKER_NETWORK} docker compose up -d
+                            
+                            # Hiển thị trạng thái các containers
+                            docker compose ps
                         '''
                     } catch (Exception e) {
                         error "Docker Compose failed: ${e.getMessage()}"
@@ -96,84 +51,62 @@ EOL
             }
         }
 
-        stage('Start Infrastructure Services') {
+        stage('Deploy Microservices') {
             steps {
                 script {
                     try {
                         sh '''
-                            echo "Starting infrastructure services..."
-                            docker compose up 
+                            # Login to Docker Hub
+                            echo ${DOCKERHUB_CREDENTIALS_PSW} | docker login -u ${DOCKERHUB_CREDENTIALS_USR} --password-stdin
                             
-                            echo "Waiting for infrastructure services to be ready..."
-                            sleep 30
-                            
-                            echo "Checking infrastructure services status..."
-                            docker compose ps
-                        '''
-                    } catch (Exception e) {
-                        error "Failed to start infrastructure services: ${e.getMessage()}"
-                    }
-                }
-            }
-        }
-
-        stage('Start Microservices') {
-            steps {
-                script {
-                    try {
-                        sh '''
-                            echo "Starting microservices..."
-                            
-                            # Run API Gateway
+                            # Pull và chạy các services
+                            # API Gateway
+                            docker pull 4miby/api-gateway:latest
                             docker run -d --name api-gateway \
                                 --network ${DOCKER_NETWORK} \
                                 -p 9000:9000 \
-                                halephu01/api-gateway:latest
+                                4miby/api-gateway:latest
 
-                            # Run Product Service
+                            # Product Service
+                            docker pull 4miby/product-service:latest
                             docker run -d --name product-service \
                                 --network ${DOCKER_NETWORK} \
                                 -p 8080:8080 \
-                                halephu01/product-service:latest
+                                4miby/product-service:latest
 
-                            # Run Order Service
+                            # Order Service
+                            docker pull 4miby/order-service:latest
                             docker run -d --name order-service \
                                 --network ${DOCKER_NETWORK} \
                                 -p 8081:8081 \
-                                halephu01/order-service:latest
+                                4miby/order-service:latest
 
-                            # Run Inventory Service
+                            # Inventory Service
+                            docker pull 4miby/inventory-service:latest
                             docker run -d --name inventory-service \
                                 --network ${DOCKER_NETWORK} \
                                 -p 8082:8082 \
-                                halephu01/inventory-service:latest
+                                4miby/inventory-service:latest
 
-                            # Run Notification Service
+                            # Notification Service
+                            docker pull 4miby/notification-service:latest
                             docker run -d --name notification-service \
                                 --network ${DOCKER_NETWORK} \
                                 -p 8083:8083 \
-                                halephu01/notification-service:latest
+                                4miby/notification-service:latest
 
-                            # Run Identity Service
+                            # Identity Service
+                            docker pull 4miby/identity-service:latest
                             docker run -d --name identity-service \
                                 --network ${DOCKER_NETWORK} \
                                 -p 8087:8087 \
-                                halephu01/identity-service:latest
+                                4miby/identity-service:latest
 
-                            echo "Waiting for microservices to be ready..."
-                            sleep 30
-                            
-                            echo "Checking containers status..."
+                            # Kiểm tra trạng thái
                             docker ps -a
-                            
-                            echo "Checking containers logs..."
-                            for service in api-gateway product-service order-service inventory-service notification-service identity-service; do
-                                echo "Logs for $service:"
-                                docker logs $service --tail 50
-                            done
                         '''
                     } catch (Exception e) {
-                        error "Failed to start microservices: ${e.getMessage()}"
+                        error "Failed to deploy microservices: ${e.getMessage()}"
                     }
                 }
             }
@@ -184,77 +117,38 @@ EOL
                 script {
                     try {
                         sh '''
-                            echo "Checking Node.js and npm..."
+                            # Kiểm tra Node.js
+                            echo "Checking Node.js installation..."
                             if ! command -v node &> /dev/null; then
-                                echo "Node.js not found. Installing Node.js..."
+                                echo "Installing Node.js..."
                                 curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
                                 apt-get install -y nodejs
                             fi
                             
-                            echo "Setting up frontend..."
+                            # Di chuyển vào thư mục frontend
                             cd frontend
                             
+                            # Hiển thị thư mục hiện tại
+                            echo "Current directory: $(pwd)"
+                            ls -la
+                            
+                            # Cài đặt dependencies
                             echo "Installing dependencies..."
                             npm install
                             
-                            echo "Building frontend..."
-                            npm run build
-                            
-                            echo "Starting frontend service..."
+                            # Chạy ứng dụng
+                            echo "Starting frontend application..."
                             npm start &
                             
+                            # Đợi frontend khởi động
                             echo "Waiting for frontend to start..."
-                            sleep 10
+                            sleep 30
                             
-                            echo "Frontend setup complete"
+                            # Kiểm tra process
+                            ps aux | grep npm
                         '''
                     } catch (Exception e) {
-                        error "Failed to setup frontend: ${e.getMessage()}"
-                    }
-                }
-            }
-        }
-
-        stage('Health Check') {
-            steps {
-                script {
-                    try {
-                        sh '''
-                            echo "Performing health checks..."
-                            
-                            # Function for health check with retry
-                            check_health() {
-                                local url=$1
-                                local service=$2
-                                local max_attempts=5
-                                local wait_time=10
-                                
-                                for i in $(seq 1 $max_attempts); do
-                                    if curl -f "$url" -m 5; then
-                                        echo "$service is healthy"
-                                        return 0
-                                    else
-                                        echo "Attempt $i: $service not healthy, waiting ${wait_time}s..."
-                                        sleep $wait_time
-                                    fi
-                                done
-                                echo "$service health check failed after $max_attempts attempts"
-                                return 1
-                            }
-                            
-                            # Check all services
-                            check_health "http://localhost:9000/actuator/health" "API Gateway"
-                            check_health "http://localhost:8080/actuator/health" "Product Service"
-                            check_health "http://localhost:8081/actuator/health" "Order Service"
-                            check_health "http://localhost:8082/actuator/health" "Inventory Service"
-                            check_health "http://localhost:8083/actuator/health" "Notification Service"
-                            check_health "http://localhost:8087/actuator/health" "Identity Service"
-                            check_health "http://localhost:3500" "Frontend"
-                            
-                            echo "Health checks completed"
-                        '''
-                    } catch (Exception e) {
-                        error "Health checks failed: ${e.getMessage()}"
+                        error "Frontend setup failed: ${e.getMessage()}"
                     }
                 }
             }
@@ -265,6 +159,7 @@ EOL
         always {
             cleanWs()
         }
+        
         failure {
             script {
                 sh '''
