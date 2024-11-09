@@ -10,9 +10,19 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                git branch:'main', url: 'https://github.com/halephu01/Jenkins-CI-CD.git'
                 script {
-                    sh 'ls -la'
+                    try {
+                        git branch:'main', url: 'https://github.com/halephu01/Jenkins-CI-CD.git'
+                        sh '''
+                            echo "Current directory contents:"
+                            ls -la
+                            echo "Git status:"
+                            git status
+                        '''
+                    } catch (Exception e) {
+                        echo "Error in Clone Repository stage: ${e.getMessage()}"
+                        error("Clone Repository stage failed")
+                    }
                 }
             }
         }
@@ -20,8 +30,40 @@ pipeline {
         stage('Docker Login') {
             steps {
                 script {
-                    sh "echo $DOCKERHUB_PASS | docker login -u $DOCKERHUB_USER --password-stdin"
-                    sh "docker info"
+                    try {
+                        sh '''
+                            echo "Checking Docker installation:"
+                            docker --version
+                            echo "Attempting Docker login..."
+                            echo $DOCKERHUB_PASS | docker login -u $DOCKERHUB_USER --password-stdin
+                            echo "Docker info:"
+                            docker info
+                        '''
+                    } catch (Exception e) {
+                        echo "Error in Docker Login stage: ${e.getMessage()}"
+                        error("Docker Login stage failed")
+                    }
+                }
+            }
+        }
+
+        stage('Check Environment') {
+            steps {
+                script {
+                    sh '''
+                        echo "Workspace directory:"
+                        pwd
+                        echo "System information:"
+                        uname -a
+                        echo "Docker version:"
+                        docker --version
+                        echo "Docker Compose version:"
+                        docker-compose --version
+                        echo "Node version:"
+                        node -v || echo "Node.js not installed"
+                        echo "NPM version:"
+                        npm -v || echo "NPM not installed"
+                    '''
                 }
             }
         }
@@ -131,17 +173,18 @@ pipeline {
 
     post {
         always {
-            sh 'docker logout'
+            echo "Pipeline completed - Cleaning up..."
+            sh 'docker logout || true'
+        }
+        success {
+            echo "Pipeline completed successfully!"
         }
         failure {
+            echo "Pipeline failed! Check the logs above for details."
             sh '''
-                docker-compose down
-                docker rm -f api-gateway || true
-                docker rm -f notification-service || true
-                docker rm -f inventory-service || true
-                docker rm -f order-service || true
-                docker rm -f identity-service || true
-                docker rm -f product-service || true
+                echo "Cleaning up containers..."
+                docker-compose down || true
+                docker rm -f api-gateway notification-service inventory-service order-service identity-service product-service || true
             '''
         }
     }
