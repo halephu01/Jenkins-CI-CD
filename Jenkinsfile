@@ -49,22 +49,17 @@ pipeline {
                 script {
                     sh '''
                         mkdir -p docker/prometheus
-                        DOCKER_HOST_IP=$(echo "172.17.0.1")
-                        cat << EOF > docker/prometheus/prometheus.yml
-global:
-  scrape_interval: 15s
-  evaluation_interval: 15s
+                        DOCKER_HOST_IP=$(echo 172.17.0.1)
+                        cat > docker/prometheus/prometheus.yml << 'EOL'
+                        global:
+                          scrape_interval: 15s
+                          evaluation_interval: 15s
 
-scrape_configs:
-  - job_name: 'prometheus'
-    static_configs:
-      - targets: ['localhost:9090']
-
-  - job_name: 'spring-actuator'
-    metrics_path: '/actuator/prometheus'
-    static_configs:
-      - targets: ['${DOCKER_HOST_IP}:8080']
-EOF
+                        scrape_configs:
+                          - job_name: 'prometheus'
+                            static_configs:
+                              - targets: ['localhost:9090']
+                        EOL
                         chmod 644 docker/prometheus/prometheus.yml
                         chown jenkins:jenkins docker/prometheus/prometheus.yml
                     '''
