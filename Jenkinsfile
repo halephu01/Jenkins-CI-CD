@@ -56,7 +56,7 @@ pipeline {
                         mkdir -p docker/prometheus
                         
                         # Lấy Docker host IP
-                        DOCKER_HOST_IP=$(ip -4 addr show docker0 | grep -Po 'inet \K[\d.]+' || echo "172.17.0.1")
+                        DOCKER_HOST_IP=$(ip -4 addr show docker0 | grep -Po 'inet \\K[\\d.]+' || echo "172.17.0.1")
                         
                         # Tạo file prometheus.yml
                         cat > docker/prometheus/prometheus.yml << EOL
