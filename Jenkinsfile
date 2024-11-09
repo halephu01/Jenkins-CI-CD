@@ -25,22 +25,17 @@ pipeline {
                             chmod +x /usr/local/bin/docker-compose
                         fi
                         
-                        # Kiểm tra Docker service
-                        if ! systemctl is-active --quiet docker; then
-                            echo "Starting Docker service..."
-                            systemctl start docker
+                        # Start Docker daemon if not running (for non-systemd systems)
+                        if ! docker info &> /dev/null; then
+                            echo "Starting Docker daemon..."
+                            dockerd &
+                            sleep 10
                         fi
                         
-                        # Kiểm tra quyền Docker
-                        if ! groups | grep -q docker; then
-                            echo "Adding jenkins user to docker group..."
-                            usermod -aG docker jenkins
-                        fi
-                        
-                        # Kiểm tra Docker network
+                        # Create Docker network if not exists
                         if ! docker network ls | grep -q "${DOCKER_NETWORK}"; then
                             echo "Creating Docker network..."
-                            docker network create ${DOCKER_NETWORK}
+                            docker network create ${DOCKER_NETWORK} || true
                         fi
                         
                         echo "Environment check complete"
@@ -115,13 +110,16 @@ EOL
                 script {
                     try {
                         sh '''
+                            # Ensure docker-compose.yml exists
+                            if [ ! -f docker-compose.yml ]; then
+                                echo "Error: docker-compose.yml not found"
+                                exit 1
+                            fi
+                            
                             # Cleanup
                             echo "Cleaning up existing containers..."
                             docker-compose down --remove-orphans || true
                             docker system prune -f || true
-                            
-                            # Create network if not exists
-                            docker network create ${DOCKER_NETWORK} || true
                             
                             # Start services
                             echo "Starting services..."
@@ -143,7 +141,7 @@ EOL
                             docker ps -a
                             docker network ls
                             docker volume ls
-                            docker-compose logs
+                            docker compose logs || true
                         '''
                         currentBuild.result = 'FAILURE'
                         error("Docker Compose stage failed")
@@ -315,7 +313,6 @@ EOL
                 }
             }
         }
-    }
 
     post {
         always {
