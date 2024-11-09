@@ -2,26 +2,40 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_USER = 'halephu01'
-        DOCKERHUB_PASS = credentials('Halephu0!234')
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
         NETWORK_NAME = 'my-network'
     }
 
     stages {
+        stage('Check Environment') {
+            steps {
+                script {
+                    sh '''
+                        echo "Workspace directory:"
+                        pwd
+                        echo "System information:"
+                        uname -a
+                        echo "Docker version:"
+                        docker --version || echo "Docker not installed"
+                        echo "Docker Compose version:"
+                        docker-compose --version || echo "Docker Compose not installed"
+                        echo "Node version:"
+                        node -v || echo "Node.js not installed"
+                        echo "NPM version:"
+                        npm -v || echo "NPM not installed"
+                    '''
+                }
+            }
+        }
+
         stage('Clone Repository') {
             steps {
                 script {
                     try {
                         git branch:'main', url: 'https://github.com/halephu01/Jenkins-CI-CD.git'
-                        sh '''
-                            echo "Current directory contents:"
-                            ls -la
-                            echo "Git status:"
-                            git status
-                        '''
+                        sh 'ls -la'
                     } catch (Exception e) {
-                        echo "Error in Clone Repository stage: ${e.getMessage()}"
-                        error("Clone Repository stage failed")
+                        error("Clone Repository failed: ${e.getMessage()}")
                     }
                 }
             }
@@ -32,38 +46,12 @@ pipeline {
                 script {
                     try {
                         sh '''
-                            echo "Checking Docker installation:"
-                            docker --version
-                            echo "Attempting Docker login..."
-                            echo $DOCKERHUB_PASS | docker login -u $DOCKERHUB_USER --password-stdin
-                            echo "Docker info:"
-                            docker info
+                            echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin
+                            echo "Docker login successful"
                         '''
                     } catch (Exception e) {
-                        echo "Error in Docker Login stage: ${e.getMessage()}"
-                        error("Docker Login stage failed")
+                        error("Docker login failed: ${e.getMessage()}")
                     }
-                }
-            }
-        }
-
-        stage('Check Environment') {
-            steps {
-                script {
-                    sh '''
-                        echo "Workspace directory:"
-                        pwd
-                        echo "System information:"
-                        uname -a
-                        echo "Docker version:"
-                        docker --version
-                        echo "Docker Compose version:"
-                        docker-compose --version
-                        echo "Node version:"
-                        node -v || echo "Node.js not installed"
-                        echo "NPM version:"
-                        npm -v || echo "NPM not installed"
-                    '''
                 }
             }
         }
@@ -173,8 +161,7 @@ pipeline {
 
     post {
         always {
-            echo "Pipeline completed - Cleaning up..."
-            sh 'docker logout || true'
+            sh 'docker logout'
         }
         success {
             echo "Pipeline completed successfully!"
