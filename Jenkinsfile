@@ -49,12 +49,8 @@ pipeline {
                 script {
                     sh '''
                         mkdir -p docker/prometheus
-                        
-                        # Lấy Docker host IP
-                        DOCKER_HOST_IP=$(ip -4 addr show docker0 | grep -Po 'inet \\K[\\d.]+' || echo "172.17.0.1")
-                        
-                        # Tạo file prometheus.yml
-                        cat > docker/prometheus/prometheus.yml << EOL
+                        DOCKER_HOST_IP=$(echo "172.17.0.1")
+                        cat << EOF > docker/prometheus/prometheus.yml
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
@@ -63,44 +59,12 @@ scrape_configs:
   - job_name: 'prometheus'
     static_configs:
       - targets: ['localhost:9090']
-  - job_name: 'api-gateway'
-    metrics_path: '/actuator/prometheus'
-    static_configs:
-      - targets: ['${DOCKER_HOST_IP}:9000']
-        labels:
-          application: 'API Gateway'
-  - job_name: 'product-service'
+
+  - job_name: 'spring-actuator'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets: ['${DOCKER_HOST_IP}:8080']
-        labels:
-          application: 'Product Service'
-  - job_name: 'order-service'
-    metrics_path: '/actuator/prometheus'
-    static_configs:
-      - targets: ['${DOCKER_HOST_IP}:8081']
-        labels:
-          application: 'Order Service'
-  - job_name: 'inventory-service'
-    metrics_path: '/actuator/prometheus'
-    static_configs:
-      - targets: ['${DOCKER_HOST_IP}:8082']
-        labels:
-          application: 'Inventory Service'
-  - job_name: 'notification-service'
-    metrics_path: '/actuator/prometheus'
-    static_configs:
-      - targets: ['${DOCKER_HOST_IP}:8083']
-        labels:
-          application: 'Notification Service'
-  - job_name: 'identity-service'
-    metrics_path: '/actuator/prometheus'
-    static_configs:
-      - targets: ['${DOCKER_HOST_IP}:8087']
-        labels:
-          application: 'Identity Service'
-EOL
-                        
+EOF
                         chmod 644 docker/prometheus/prometheus.yml
                         chown jenkins:jenkins docker/prometheus/prometheus.yml
                     '''
