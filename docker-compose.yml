@@ -24,7 +24,9 @@ services:
       - ./data/mysql:/var/lib/mysql
       - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     command:
-      - --lower_case_table_names=2
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+07:00
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
