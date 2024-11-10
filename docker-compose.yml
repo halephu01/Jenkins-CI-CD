@@ -11,7 +11,8 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: password
       MONGO_INITDB_DATABASE: product-service
     volumes:
-      - mongodb_data:/data/db
+      - ./data/mongodb:/data/db
+    user: "1000:1000"
 
   mysql:
     image: mysql:latest
@@ -21,8 +22,11 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - ./data/mysql:/var/lib/mysql
       - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    user: "1000:1000"
+    command:
+      - --lower_case_table_names=2
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
@@ -98,10 +102,12 @@ services:
 
   tempo:
     image: grafana/tempo:latest
+    container_name: tempo
+    user: root
     command: [ "-config.file=/etc/tempo/tempo.yml" ]
     volumes:
-      - ./docker/tempo/tempo.yml:/etc/tempo/tempo.yml
-      - tempo-data:/tmp/tempo
+      - ./docker/tempo/tempo.yml:/etc/tempo/tempo.yml:ro
+      - ./data/tempo:/tmp/tempo
     ports:
       - "3110:3100"  # Tempo
       - "9411:9411" # zipkin
@@ -124,4 +130,3 @@ volumes:
 
 networks:
   amibi-network:
-    external: true
