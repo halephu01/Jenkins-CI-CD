@@ -15,10 +15,20 @@ pipeline {
                     try {
                         sh '''
                             echo "Checking environment..."
+                            
+                            # Cài đặt Maven nếu chưa có
+                            if ! command -v mvn &> /dev/null; then
+                                echo "Installing Maven..."
+                                apt-get update
+                                apt-get install -y maven
+                            fi
+                            
+                            # Kiểm tra phiên bản các công cụ
                             docker --version
                             docker-compose --version
                             node --version
                             npm --version
+                            mvn -version
                             whoami
                             groups
                             
