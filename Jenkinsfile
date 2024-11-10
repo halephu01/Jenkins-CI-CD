@@ -91,31 +91,44 @@ pipeline {
                 script {
                     try {
                         sh '''
-                            # Login to Docker Hub
-                            echo ${DOCKERHUB_CREDENTIALS_PSW} | docker login -u ${DOCKERHUB_CREDENTIALS_USR} --password-stdin
-                            
-                            # Function để pull và run container
-                            deploy_service() {
-                                local name=$1
-                                local port=$2
-                                echo "Deploying ${name}..."
-                                docker pull 4miby/${name}:latest
-                                docker run -d --name ${name} \
-                                    --network ${DOCKER_NETWORK} \
-                                    -p ${port}:${port} \
-                                    4miby/${name}:latest
-                            }
-                            
-                            # Deploy các services
-                            deploy_service "api-gateway" "9000"
-                            deploy_service "product-service" "8080"
-                            deploy_service "order-service" "8081"
-                            deploy_service "inventory-service" "8082"
-                            deploy_service "notification-service" "8083"
-                            deploy_service "identity-service" "8087"
-                            
-                            # Kiểm tra trạng thái
-                            docker ps -a
+                            # Di chuyển đến api-gateway và chạy
+                            echo "Deploying api-gateway..."
+                            cd api-gateway
+                            mvn spring-boot:run &
+                            cd ..
+
+                            # Di chuyển đến identity-service và chạy
+                            echo "Deploying identity-service..."
+                            cd identity-service
+                            mvn spring-boot:run &
+                            cd ..
+
+                            # Di chuyển đến inventory-service và chạy
+                            echo "Deploying inventory-service..."
+                            cd inventory-service
+                            mvn spring-boot:run &
+                            cd ..
+
+                            # Di chuyển đến notification-service và chạy
+                            echo "Deploying notification-service..."
+                            cd notification-service
+                            mvn spring-boot:run &
+                            cd ..
+
+                            # Di chuyển đến order-service và chạy
+                            echo "Deploying order-service..."
+                            cd order-service
+                            mvn spring-boot:run &
+                            cd ..
+
+                            # Di chuyển đến product-service và chạy
+                            echo "Deploying product-service..."
+                            cd product-service
+                            mvn spring-boot:run &
+                            cd ..
+
+                            # Kiểm tra các processes đang chạy
+                            ps aux | grep spring-boot
                         '''
                     } catch (Exception e) {
                         error "Failed to deploy microservices: ${e.getMessage()}"
