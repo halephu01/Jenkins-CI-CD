@@ -13,7 +13,7 @@ pipeline {
         TESTCONTAINERS_RYUK_DISABLED = 'true'
     }
 
-    }
+    
     
     stages {
         stage('Checkout') {
@@ -67,3 +67,4 @@ pipeline {
             echo 'Pipeline execution failed!'
         }
     }
+}
