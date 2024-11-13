@@ -10,6 +10,9 @@ pipeline {
         GITHUB_CREDENTIALS = credentials('github-credentials')  // Thêm credentials cho GitHub
         GITHUB_REPO_URL = 'https://github.com/halephu01/Jenkins-CI-CD.git'  // URL repo của bạn
         BRANCH_NAME = 'main'  // Tên nhánh muốn pull
+        TESTCONTAINERS_RYUK_DISABLED = 'true'
+    }
+
     }
     
     stages {
@@ -36,6 +39,7 @@ pipeline {
                 sh 'mvn test'
             }
         }
+    
         
         stage('Deploy') {
             steps {
