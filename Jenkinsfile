@@ -37,22 +37,6 @@ pipeline {
             }
         }
         
-        stage('Docker Build & Push') {
-            environment {
-                DOCKER_CREDENTIALS = credentials('docker-credentials') // Cấu hình credentials trong Jenkins
-            }
-            steps {
-                script {
-                    // Đăng nhập vào Docker registry
-                    sh 'echo $DOCKER_CREDENTIALS_PSW | docker login -u $DOCKER_CREDENTIALS_USR --password-stdin'
-                    
-                    // Build và push các image Docker
-                    sh 'docker-compose build'
-                    sh 'docker-compose push'
-                }
-            }
-        }
-        
         stage('Deploy') {
             steps {
                 script {
