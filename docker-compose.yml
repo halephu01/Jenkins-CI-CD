@@ -36,14 +36,14 @@ services:
   ## Mongo Docker Compose Config
   mongo:
     container_name: mongo
-    image: mongo:4.4.14-rc0-focal
+    image: mongo
     restart: always
     ports:
       - "27017:27017"
     expose:
       - "27017"
     volumes:
-      - ./mongo-data:/data/db
+      - mongo-data:/data/db
 
   ## Keycloak Config with Mysql database
   keycloak-mysql:
@@ -211,3 +211,6 @@ services:
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=password
+
+volumes:
+  mongo-data:
