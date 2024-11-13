@@ -1,67 +1,20 @@
-# MICROservices PROJECT
+# Spring Boot Microservices
 
-Đây là một dự án MICROservices bao gồm các service sau:
-- **API GATEWAY**
-- **PRODUCT SERVICE**
-- **INVENTORY SERVICE**
-- **ORDER SERVICE**
-- **IDENTITY SERVICE**
-- **NOTIFICATION SERVICE**
+# ATTENTION: This repository is archived, you can find the source code in the new repository that includes much more concepts and upto date - https://github.com/SaiUpadhyayula/spring-boot-3-microservices-course
 
-## YÊU CẦU HỆ THỐNG
+The link to the new tutorial can be found here - https://www.youtube.com/playlist?list=PLSVW22jAG8pDeU80nDzbUgr8qqzEMppi8
 
-- **JAVA 21**
-- **DOCKER**
-- **DOCKER COMPOSE**
-- **MAVEN**
+This repository contains the latest source code of the spring-boot-microservices tutorial
 
-## HƯỚNG DẪN CÀI ĐẶT VÀ CHẠY
+You can watch the tutorial on Youtube here - https://www.youtube.com/watch?v=mPPhcU7oWDU&t=20634s
 
-1. **CLONE REPOSITORY VỀ MÁY LOCAL:**
+## How to run the application using Docker
 
-   ```bash
-   git clone <repository_url>
-   cd <project_folder>
-   ```
+1. Run `mvn clean package -DskipTests` to build the applications and create the docker image locally.
+2. Run `docker-compose up -d` to start the applications.
 
-2. **CHẠY DOCKER COMPOSE ĐỂ KHỞI ĐỘNG CÁC CONTAINER CẦN THIẾT:**
+## How to run the application without Docker
 
-   ```bash
-   docker-compose up -d
-   ```
+1. Run `mvn clean verify -DskipTests` by going inside each folder to build the applications.
+2. After that run `mvn spring-boot:run` by going inside each folder to start the applications.
 
-3. **CHẠY TỪNG SERVICE:**
-
-   Đối với mỗi service (api-gateway, product-service, inventory-service, order-service, identity-service, notification-service), thực hiện các bước sau:
-
-   ```bash
-   cd <service_folder>
-   mvn spring-boot:run
-   ```
-
-4. **TRUY CẬP API GATEWAY:**
-
-   API Gateway sẽ chạy tại `http://localhost:9000` (hoặc port được cấu hình).
-
-## CẤU TRÚC PROJECT
-
-- `api-gateway`: **API GATEWAY SERVICE**
-- `product-service`: **QUẢN LÝ SẢN PHẨM**
-- `inventory-service`: **QUẢN LÝ KHO HÀNG**
-- `order-service`: **QUẢN LÝ ĐƠN HÀNG**
-- `identity-service`: **XÁC THỰC VÀ PHÂN QUYỀN**
-- `notification-service`: **GỬI THÔNG BÁO**
-
-## MONITORING
-
-Dự án sử dụng **GRAFANA**, **PROMETHEUS**, và **LOKI** cho việc giám sát. Truy cập Grafana tại `http://localhost:3000`.
-
-## FRONTEND
-
-Frontend được phát triển bằng **REACT**. Để chạy frontend:
-``` bash
-cd frontend
-npm install
-npm start
-```
-Truy cập frontend tại `http://localhost:3500`
