@@ -11,7 +11,7 @@ spring:
             - Path=/api/users/**
             - Path=/api/permissions/**
         - id: product_service
-          uri: http://product-service:8080
+          uri: http://product-service:8099
           predicates:
             - Path=/api/products/**
         - id: inventory_service
@@ -74,7 +74,7 @@ loki:
 
 product:
   service:
-    url: http://product-service:8080
+    url: http://product-service:8099
 order:
   service:
     url: http://order-service:8081

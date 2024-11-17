@@ -23,7 +23,7 @@ server:
 
 inventory:
   service:
-    url: http://inventory-service:8080
+    url: http://inventory-service:8082
 
 springdoc:
   swagger-ui:
