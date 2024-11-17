@@ -1,11 +1,6 @@
 pipeline {
     agent any
     
-    tools {
-        maven 'Maven 3.9.6' 
-        jdk 'JDK21'      
-    }
-    
     environment {
         GITHUB_CREDENTIALS = credentials('github-credentials')  
         GITHUB_REPO_URL = 'https://github.com/halephu01/Jenkins-CI-CD.git'  
