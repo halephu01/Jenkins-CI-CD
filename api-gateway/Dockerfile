@@ -1,5 +1,18 @@
-FROM openjdk:17
+# Build stage
+FROM maven:3.9.6-eclipse-temurin-21 AS build
+WORKDIR /app
 
-COPY target/*.jar app.jar
+COPY .mvn/ .mvn
+COPY pom.xml ./
+COPY src ./src
 
-ENTRYPOINT ["java","-jar","/app.jar"]
+RUN mvn clean package -DskipTests
+
+# Runtime stage
+FROM openjdk:21-jdk-slim
+
+COPY --from=build /app/target/*.jar ./app.jar
+
+EXPOSE 9000
+
+ENTRYPOINT ["java", "-jar", "/app.jar"]

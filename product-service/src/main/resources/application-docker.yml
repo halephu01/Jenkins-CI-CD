@@ -1,0 +1,51 @@
+spring:
+  application:
+    name: product-service
+  data:
+    mongodb:
+      uri: ${SPRING_DATA_MONGODB_URI}
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+server:
+  shutdown: graceful
+  port: 8080
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /api-docs
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, prometheus
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http:
+          server:
+            requests: true
+  observations:
+    key-values:
+      application: ${spring.application.name}
+  tracing:
+    sampling:
+      probability: 1.0
+    zipkin:
+      tracing:
+        endpoint: ${MANAGEMENT_ZIPKIN_TRACING_ENDPOINT}
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
+  level:
+    org.springframework.data.mongodb: INFO
+    org.mongodb: INFO

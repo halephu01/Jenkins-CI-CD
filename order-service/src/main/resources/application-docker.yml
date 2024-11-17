@@ -1,0 +1,72 @@
+spring:
+  application:
+    name: order-service
+  datasource:
+    url: jdbc:mysql://mysql:3306/order_service
+    username: root
+    password: mysql
+  jpa:
+    hibernate:
+      ddl-auto: none
+  kafka:
+    bootstrap-servers: broker:29092
+    template:
+      default-topic: order-placed
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: io.confluent.kafka.serializers.KafkaAvroSerializer
+      properties:
+        schema.registry.url: http://schema-registry:8081
+
+server:
+  port: 8081
+
+inventory:
+  service:
+    url: http://inventory-service:8080
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /api-docs
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      inventory:
+        registerHealthIndicator: true
+        event-consumer-buffer-size: 10
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 5
+        failureRateThreshold: 50
+        waitDurationInOpenState: 5s
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        minimum-number-of-calls: 5
+  timelimiter:
+    instances:
+      inventory:
+        timeout-duration: 3s
+  retry:
+    instances:
+      inventory:
+        max-attempts: 3
+        wait-duration: 5s
+
+management:
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http:
+          server:
+            requests: true
+  observations:
+    key-values:
+      application: order-service
+  tracing:
+    sampling:
+      probability: 1.0
+
+loki:
+  url: http://loki:3100/loki/api/v1/push

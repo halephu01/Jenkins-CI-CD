@@ -1,0 +1,41 @@
+spring:
+  application:
+    name: notification-service
+  mail:
+    host: sandbox.smtp.mailtrap.io
+    port: 2525
+    username: 066cc9c90aed8a
+    password: 8f7f63dda59330
+  kafka:
+    bootstrap-servers: broker:29092
+    consumer:
+      group-id: notification-service
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: io.confluent.kafka.serializers.KafkaAvroDeserializer
+      properties:
+        schema.registry.url: http://schema-registry:8081
+        specific.avro.reader: true
+
+server:
+  port: 8083
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http:
+          server:
+            requests: true
+  observations:
+    key-values:
+      application: notification-service
+  tracing:
+    sampling:
+      probability: 1.0
+
+loki:
+  url: http://loki:3100/loki/api/v1/push

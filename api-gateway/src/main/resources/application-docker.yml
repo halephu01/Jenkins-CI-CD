@@ -1,0 +1,86 @@
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: identity_service
+          uri: http://identity-service:8087
+          predicates:
+            - Path=/api/auth/**
+            - Path=/api/users/**
+            - Path=/api/permissions/**
+        - id: product_service
+          uri: http://product-service:8080
+          predicates:
+            - Path=/api/products/**
+        - id: inventory_service
+          uri: http://inventory-service:8082
+          predicates:
+            - Path=/api/inventory/**
+        - id: order_service
+          uri: http://order-service:8081
+          predicates:
+            - Path=/api/orders/**
+
+management:
+  health:
+    circuitbreakers:
+      enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http:
+          server:
+            requests: true
+  observations:
+    key-values:
+      application: api-gateway
+  tracing:
+    sampling:
+      probability: 1.0
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        registerHealthIndicator: true
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 5s
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        minimum-number-of-calls: 5
+  timelimiter:
+    configs:
+      default:
+        timeout-duration: 3s
+  retry:
+    configs:
+      default:
+        max-attempts: 3
+        wait-duration: 2s
+
+loki:
+  url: http://loki:3100/loki/api/v1/push
+
+product:
+  service:
+    url: http://product-service:8080
+order:
+  service:
+    url: http://order-service:8081
+inventory:
+  service:
+    url: http://inventory-service:8082
+identity:
+  service:
+    url: http://identity-service:8087

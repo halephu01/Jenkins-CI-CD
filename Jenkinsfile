@@ -3,7 +3,7 @@ pipeline {
     
     tools {
         maven 'Maven 3.9.6' 
-        jdk 'JDK 17'      
+        jdk 'JDK 21'      
     }
     
     environment {
@@ -22,12 +22,6 @@ pipeline {
                     url: "${GITHUB_REPO_URL}"
             }
         }
-        
-        stage('Build') {
-            steps {
-                sh 'mvn clean package -DskipTests'
-            }
-        }
     
         stage('Deploy') {
             steps {
@@ -39,11 +33,6 @@ pipeline {
     }
     
     post {
-        always {
-            cleanWs()
-            sh 'docker logout'
-        }
-        
         success {
             echo 'Pipeline executed successfully!'
         }
@@ -53,6 +42,5 @@ pipeline {
         }
     }
 }
-
 
 

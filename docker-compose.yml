@@ -1,216 +1,363 @@
----
-version: '3.7'
 services:
-  ## MySQL Docker Compose Config
-  postgres-order:
-    container_name: postgres-order
-    image: postgres
-    environment:
-      POSTGRES_DB: order-service
-      POSTGRES_USER: ptechie
-      POSTGRES_PASSWORD: password
-      PGDATA: /data/postgres
-    volumes:
-      - ./postgres-order:/data/postgres
-    expose:
-      - "5431"
-    ports:
-      - "5431:5431"
-    command: -p 5431
-    restart: always
-
-  postgres-inventory:
-    container_name: postgres-inventory
-    image: postgres
-    environment:
-      POSTGRES_DB: inventory-service
-      POSTGRES_USER: ptechie
-      POSTGRES_PASSWORD: password
-      PGDATA: /data/postgres
-    volumes:
-      - ./postgres-inventory:/data/postgres
-    ports:
-      - "5432:5432"
-    restart: always
-
-  ## Mongo Docker Compose Config
-  mongo:
-    container_name: mongo
-    image: mongo
-    restart: always
+  mongodb:
+    image: mongo:7.0.5
+    container_name: mongodb
     ports:
       - "27017:27017"
-    expose:
-      - "27017"
-    volumes:
-      - mongo-data:/data/db
-
-  ## Keycloak Config with Mysql database
-  keycloak-mysql:
-    container_name: keycloak-mysql
-    image: mysql:5.7
-    volumes:
-      - ./mysql_keycloak_data:/var/lib/mysql
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: keycloak
-      MYSQL_USER: keycloak
-      MYSQL_PASSWORD: password
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: product-service
+    volumes:
+      - ./data/mongodb:/data/db
+    networks:
+      custom_network:
+        ipv4_address: 192.168.1.101
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
-  keycloak:
-    container_name: keycloak
-    image: quay.io/keycloak/keycloak:18.0.0
-    command: [ "start-dev", "--import-realm" ]
+  mysql:
+    image: mysql:8.3.0
+    container_name: mysql
     environment:
-      DB_VENDOR: MYSQL
-      DB_ADDR: mysql
-      DB_DATABASE: keycloak
-      DB_USER: keycloak
-      DB_PASSWORD: password
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
+      MYSQL_ROOT_PASSWORD: mysql
     ports:
-      - "8081:8081"
+      - "3306:3306"
     volumes:
-      - ./realms/:/opt/keycloak/data/import/
-    depends_on:
-      - keycloak-mysql
+      - ./data/mysql:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      custom_network:
+        ipv4_address: 192.168.1.102
+    command: --default-authentication-plugin=mysql_native_password
 
   zookeeper:
-    image: confluentinc/cp-zookeeper:7.0.1
+    image: confluentinc/cp-zookeeper:7.5.0
+    hostname: zookeeper
     container_name: zookeeper
     ports:
       - "2181:2181"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      custom_network:
+        ipv4_address: 192.168.1.103
 
   broker:
-    image: confluentinc/cp-kafka:7.0.1
+    image: confluentinc/cp-kafka:7.5.0
     container_name: broker
     ports:
       - "9092:9092"
+      - "29092:29092"
     depends_on:
       - zookeeper
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://broker:29092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1 
+    networks:
+      custom_network:
+        ipv4_address: 192.168.1.104
 
-  ## Zipkin
-  zipkin:
-    image: openzipkin/zipkin
-    container_name: zipkin
-    ports:
-      - "9411:9411"
-
-  ## Eureka Server
-  discovery-server:
-    image: microservices-tutorial/discovery-server:latest
-    container_name: discovery-server
-    ports:
-      - "8761:8761"
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.5.0
+    hostname: schema-registry
+    container_name: schema-registry
     depends_on:
-      - zipkin
-
-  api-gateway:
-    image: microservices-tutorial/api-gateway:latest
-    container_name: api-gateway
-    ports:
-      - "8181:8080"
-    expose:
-      - "8181"
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY= TRACE
-    depends_on:
-      - zipkin
-      - discovery-server
-      - keycloak
-
-  ## Product-Service Docker Compose Config
-  product-service:
-    container_name: product-service
-    image: microservices-tutorial/product-service:latest
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
-    depends_on:
-      - mongo
-      - discovery-server
-      - api-gateway
-
-  ## Order-Service Docker Compose Config
-  order-service:
-    container_name: order-service
-    image: microservices-tutorial/order-service:latest
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-order:5431/order-service
-    depends_on:
-      - postgres-order
       - broker
-      - zipkin
-      - discovery-server
-      - api-gateway
-
-  ## Inventory-Service Docker Compose Config
-  inventory-service:
-    container_name: inventory-service
-    image: microservices-tutorial/inventory-service:latest
+    ports:
+      - "8085:8081"
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-inventory:5432/inventory-service
-    depends_on:
-      - postgres-inventory
-      - discovery-server
-      - api-gateway
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'broker:29092'
+      SCHEMA_REGISTRY_LISTENERS: http://schema-registry:8081
+    networks:
+      custom_network:
+        ipv4_address: 192.168.1.105
 
-  ## Notification-Service Docker Compose Config
-  notification-service:
-    container_name: notification-service
-    image: microservices-tutorial/notification-service:latest
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
+  kafka-ui:
+    container_name: kafka-ui
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - "8086:8080"
     depends_on:
-      - zipkin
       - broker
-      - discovery-server
-      - api-gateway
+    environment:
+      KAFKA_CLUSTERS_NAME: local
+      KAFKA_CLUSTERS_BOOTSTRAPSERVERS: broker:29092
+      DYNAMIC_CONFIG_ENABLED: 'true'
+    networks:
+      custom_network:
+        ipv4_address: 192.168.1.106
 
-  ## Prometheus
+  loki:
+    image: grafana/loki:main
+    container_name: loki
+    command: [ "-config.file=/etc/loki/local-config.yaml" ]
+    ports:
+      - "3100:3100"
+    networks:
+      custom_network:
+        ipv4_address: 192.168.1.107
+
   prometheus:
-    image: prom/prometheus:v2.37.1
+    image: prom/prometheus:v2.46.0
     container_name: prometheus
-    restart: always
+    command:
+      - --enable-feature=exemplar-storage
+      - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     ports:
       - "9090:9090"
-    volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-    depends_on:
-      - product-service
-      - inventory-service
-      - order-service
-      - notification-service
+    networks:
+      custom_network:
+        ipv4_address: 192.168.1.108
 
+  tempo:
+    image: grafana/tempo:2.2.2
+    container_name: tempo
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+      - ./docker/tempo/tempo.yml:/etc/tempo.yaml:ro
+      - ./data/tempo:/tmp/tempo
+    ports:
+      - "3110:3100"  # Tempo
+      - "9411:9411" # zipkin
+    networks:
+      custom_network:
+        ipv4_address: 192.168.1.109
+    
   grafana:
-    image: grafana/grafana-oss:8.5.2
+    image: grafana/grafana:10.1.0
     container_name: grafana
-    restart: always
+    volumes:
+      - ./docker/grafana:/etc/grafana/provisioning/datasources:ro
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
     ports:
       - "3000:3000"
-    links:
-      - prometheus:prometheus
-    volumes:
-      - ./grafana:/var/lib/grafana
-    environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=password
+    networks:
+      custom_network:
+        ipv4_address: 192.168.1.110
 
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    ports:
+      - "9000:9000"
+    depends_on:
+      - mysql
+      - mongodb
+      - loki
+      - tempo
+    networks:
+      custom_network:
+        ipv4_address: 192.168.1.111
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - PRODUCT_SERVICE_URL=http://product-service:8080
+      - ORDER_SERVICE_URL=http://order-service:8081
+      - INVENTORY_SERVICE_URL=http://inventory-service:8082
+      - NOTIFICATION_SERVICE_URL=http://notification-service:8083
+      - IDENTITY_SERVICE_URL=http://identity-service:8087
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411/api/v2/spans
+
+  inventory-service:
+    build:
+      context: ./inventory-service
+      dockerfile: Dockerfile
+    container_name: inventory-service
+    ports:
+      - "8082:8082"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      loki:
+        condition: service_started
+      tempo:
+        condition: service_started
+    networks:
+      custom_network:
+        ipv4_address: 192.168.1.112
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411/api/v2/spans
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_DATABASE=inventory_service
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=mysql
+    command: >
+      sh -c "
+        echo 'Waiting for MySQL to be ready...'
+        while ! nc -z mysql 3306; do
+          sleep 1
+        done
+        echo 'MySQL is ready!'
+        java -jar /app.jar
+      "
+
+  identity-service:
+    build:
+      context: ./identity-service
+      dockerfile: Dockerfile
+    container_name: identity-service
+    ports:
+      - "8087:8087"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      loki:
+        condition: service_started
+      tempo:
+        condition: service_started
+    networks:
+      custom_network:
+        ipv4_address: 192.168.1.113
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411/api/v2/spans
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_DATABASE=identity_service
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=mysql
+      - LOGGING_CONFIG=classpath:logback-spring.xml
+      - LOKI_URL=http://loki:3100/loki/api/v1/push 
+    command: >
+      sh -c "
+        echo 'Waiting for MySQL to be ready...'
+        while ! nc -z mysql 3306; do
+          sleep 1
+        done
+        echo 'MySQL is ready!'
+        java -jar /app.jar
+      "
+
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    container_name: notification-service
+    ports:
+      - "8083:8083"
+    depends_on:
+      - loki
+      - tempo
+      - kafka-ui
+    networks:
+      custom_network:
+        ipv4_address: 192.168.1.114
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411/api/v2/spans
+      
+  order-service:
+    build:
+      context: ./order-service
+      dockerfile: Dockerfile
+    container_name: order-service
+    ports:
+      - "8081:8081"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      loki:
+        condition: service_started
+      tempo:
+        condition: service_started
+    networks:
+      custom_network:
+        ipv4_address: 192.168.1.115
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411/api/v2/spans
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_DATABASE=order_service
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=mysql
+      - INVENTORY_SERVICE_URL=http://inventory-service:8082
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092 
+      - SPRING_KAFKA_PRODUCER_PROPERTIES_SCHEMA_REGISTRY_URL=http://schema-registry:8085
+      - LOKI_URL=http://loki:3100/loki/api/v1/push
+
+  product-service:
+    build:
+      context: ./product-service
+      dockerfile: Dockerfile
+    container_name: product-service
+    ports:
+      - "8080:8080"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      loki:
+        condition: service_started
+      tempo:
+        condition: service_started
+    networks:
+      custom_network:
+        ipv4_address: 192.168.1.116
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATA_MONGODB_URI=mongodb://root:password@mongodb:27017/product-service?authSource=admin
+      - LOKI_URL=http://loki:3100/loki/api/v1/push
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411/api/v2/spans
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    image: 4miby/frontend:latest
+    ports:
+      - "80:80"
+    depends_on:
+      api-gateway:
+        condition: service_started
+      identity-service:
+        condition: service_started
+      inventory-service:
+        condition: service_started
+      product-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+    networks:
+      custom_network:
+        ipv4_address: 192.168.1.117
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+networks:
+  custom_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.1.0/24
+  
 volumes:
-  mongo-data:
+  mysql_data:
