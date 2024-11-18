@@ -35,7 +35,7 @@ pipeline {
                     try {
                         sh '''
                             cd docker
-                            docker-compose up --build
+                            docker-compose up --build -d
                         '''
                     } catch (Exception e) {
                         error "Docker build/run thất bại: ${e.message}"
