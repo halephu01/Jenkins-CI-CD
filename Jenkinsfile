@@ -2,15 +2,45 @@ pipeline {
     agent any
     environment {
         DOCKER_COMPOSE_FILE = 'docker-compose.yml'
+        JAVA_HOME = '/usr/lib/jvm/java-21-openjdk'
+        PATH = "${JAVA_HOME}/bin:${env.PATH}"
     }
     stages {
         stage('Install Dependencies') {
             steps {
                 script {
-                    // Cài đặt Docker Compose
+                    // Install required packages
                     sh '''
-                        curl -L "https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-                        chmod +x /usr/local/bin/docker-compose
+                        # Update package list
+                        sudo apt-get update
+                        
+                        # Install OpenJDK 21
+                        sudo apt-get install -y openjdk-21-jdk
+                        
+                        # Install Maven
+                        sudo apt-get install -y maven
+                        
+                        # Install Docker if not present
+                        if ! command -v docker &> /dev/null; then
+                            sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
+                            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+                            sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+                            sudo apt-get update
+                            sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+                        fi
+                        
+                        # Add Jenkins user to docker group
+                        sudo usermod -aG docker jenkins
+                        
+                        # Install Docker Compose
+                        sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+                        sudo chmod +x /usr/local/bin/docker-compose
+                        
+                        # Verify installations
+                        java -version
+                        mvn -version
+                        docker --version
+                        docker-compose --version
                     '''
                 }
             }
