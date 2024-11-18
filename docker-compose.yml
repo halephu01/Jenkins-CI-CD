@@ -190,9 +190,9 @@ services:
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411/api/v2/spans
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/actuator/health"]
-      interval: 30s
+      interval: 60s
       timeout: 10s
-      retries: 3
+      retries: 5
       start_period: 40s
 
   inventory-service:
@@ -231,9 +231,9 @@ services:
       "
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
-      interval: 30s
+      interval: 60s
       timeout: 10s
-      retries: 3
+      retries: 5
       start_period: 40s
 
   identity-service:
@@ -274,9 +274,9 @@ services:
       "
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8087/actuator/health"]
-      interval: 30s
+      interval: 60s
       timeout: 10s
-      retries: 3
+      retries: 5
       start_period: 40s
 
   notification-service:
@@ -328,9 +328,9 @@ services:
       - LOKI_URL=http://loki:3100/loki/api/v1/push
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
-      interval: 30s
+      interval: 60s
       timeout: 10s
-      retries: 3
+      retries: 5
       start_period: 40s
 
   product-service:
@@ -357,9 +357,9 @@ services:
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411/api/v2/spans
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
-      interval: 30s
+      interval: 60s
       timeout: 10s
-      retries: 3
+      retries: 5
       start_period: 40s
 
   frontend:
