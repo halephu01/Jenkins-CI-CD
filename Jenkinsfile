@@ -5,12 +5,15 @@ pipeline {
         JAVA_HOME = '/opt/java/openjdk'  
         MAVEN_HOME = '/usr/share/maven'                   
         PATH = "${JAVA_HOME}/bin:${MAVEN_HOME}/bin:${env.PATH}"
+        GITHUB_CREDENTIALS = credentials('github-credentials')
     }
 
     stages {
-        stage('Checkout') {
+        stage('Checkout từ GitHub') {
             steps {
-                checkout scm
+                git branch: 'main', 
+                    credentialsId: 'github-credentials',
+                    url: 'https://github.com/halephu01/Jenkins-CI-CD.git'
             }
         }
 
