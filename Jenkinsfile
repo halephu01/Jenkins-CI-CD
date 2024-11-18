@@ -1,112 +1,63 @@
 pipeline {
     agent any
+    
     environment {
-        DOCKER_COMPOSE_FILE = 'docker-compose.yml'
-        JAVA_HOME = '/usr/lib/jvm/java-21-openjdk'
-        PATH = "${JAVA_HOME}/bin:${env.PATH}"
+        JAVA_HOME = '/usr/lib/jvm/java-17-openjdk-amd64'  // Điều chỉnh path Java nếu cần
+        MAVEN_HOME = '/usr/share/maven'                    // Điều chỉnh path Maven nếu cần
+        PATH = "${JAVA_HOME}/bin:${MAVEN_HOME}/bin:${env.PATH}"
     }
+
     stages {
-        stage('Install Dependencies') {
+        stage('Checkout') {
+            steps {
+                // Checkout code từ repository
+                checkout scm
+            }
+        }
+
+        stage('Build Maven') {
             steps {
                 script {
-                    // Install required packages
-                    sh '''
-                        # Update package list
-                        sudo apt-get update
-                        
-                        # Install OpenJDK 21
-                        sudo apt-get install -y openjdk-21-jdk
-                        
-                        # Install Maven
-                        sudo apt-get install -y maven
-                        
-                        # Install Docker if not present
-                        if ! command -v docker &> /dev/null; then
-                            sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
-                            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-                            sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-                            sudo apt-get update
-                            sudo apt-get install -y docker-ce docker-ce-cli containerd.io
-                        fi
-                        
-                        # Add Jenkins user to docker group
-                        sudo usermod -aG docker jenkins
-                        
-                        # Install Docker Compose
-                        sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-                        sudo chmod +x /usr/local/bin/docker-compose
-                        
-                        # Verify installations
-                        java -version
-                        mvn -version
-                        docker --version
-                        docker-compose --version
-                    '''
+                    try {
+                        sh 'mvn clean package -DskipTests'
+                    } catch (Exception e) {
+                        error "Maven build thất bại: ${e.message}"
+                    }
                 }
             }
         }
 
-        stage('Checkout Code') {
-            steps {
-                git branch: 'main', url: 'https://github.com/halephu01/Jenkins-CI-CD.git'
-            }
-        }
-
-        stage('Build Services') {
+        stage('Build và Run Docker') {
             steps {
                 script {
-                    // Build các microservices bằng Docker Compose
-                    sh 'docker-compose build'
-                }
-            }
-        }
-
-        stage('Run Tests') {
-            steps {
-                script {
-                    // Kiểm tra các dịch vụ
-                    sh 'docker-compose up -d'
-                }
-            }
-        }
-
-        // stage('Push Docker Images') {
-        //     steps {
-        //         script {
-        //             // Push Docker images lên Docker Hub hoặc registry
-        //             sh 'docker-compose push'
-        //         }
-        //     }
-        // }
-
-        stage('Deploy to Staging') {
-            steps {
-                script {
-                    // Deploy ứng dụng lên môi trường staging
-                    sh 'docker-compose -f docker-compose.yml up -d'
-                }
-            }
-        }
-
-        stage('Clean Up') {
-            steps {
-                script {
-                    // Dọn dẹp containers sau khi deploy
-                    sh 'docker-compose down'
+                    try {
+                        dir('docker') {
+                            sh 'docker-compose up --build -d'
+                            
+                            sh 'docker-compose logs'
+                        }
+                    } catch (Exception e) {
+                        error "Docker build/run thất bại: ${e.message}"
+                    }
                 }
             }
         }
     }
 
     post {
-        always {
-            echo 'Pipeline Finished!'
-        }
         success {
-            echo 'Deployment Successful!'
+            echo 'Pipeline đã chạy thành công!'
         }
         failure {
-            echo 'Deployment Failed!'
+            echo 'Pipeline thất bại!'
+            script {
+                dir('docker') {
+                    sh 'docker-compose down -v || true'
+                }
+            }
+        }
+        always {
+            cleanWs()
         }
     }
 }
