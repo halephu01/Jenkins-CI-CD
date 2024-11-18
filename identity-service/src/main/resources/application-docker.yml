@@ -6,9 +6,12 @@ spring:
     url: jdbc:mysql://mysql:3306/identity_service
     username: root
     password: mysql
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
   jpa:
+    database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
-      ddl-auto: update
+    ddl-auto: update
     show-sql: true
 
   server:
