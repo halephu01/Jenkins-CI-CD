@@ -20,9 +20,50 @@ pipeline {
             }
         }
         
-        stage('Verify Services') {
+        stage('Start and Verify Services') {
             steps {
-                sh 'docker-compose ps'
+                script {
+                    sh 'docker-compose up -d'
+                    
+                    sleep(time: 300, unit: 'SECONDS')
+                    
+                    def containers = sh(
+                        script: 'docker-compose ps --services',
+                        returnStdout: true
+                    ).trim().split('\n')
+                    
+                    containers.each { container ->
+                        def containerStatus = sh(
+                            script: "docker inspect -f '{{.State.Status}}' ${container}",
+                            returnStdout: true
+                        ).trim()
+                        
+                        def healthStatus = sh(
+                            script: "docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' ${container}",
+                            returnStdout: true
+                        ).trim()
+                        
+                        if (containerStatus != 'running') {
+                            error "Container ${container} is not running. Status: ${containerStatus}"
+                        }
+                        
+                        if (healthStatus != 'none' && healthStatus != 'healthy') {
+                            error "Container ${container} is not healthy. Health status: ${healthStatus}"
+                        }
+                        
+                        def hasErrors = sh(
+                            script: "docker-compose logs ${container} | grep -i 'error\\|exception\\|failed' || true",
+                            returnStdout: true
+                        ).trim()
+                        
+                        if (hasErrors) {
+                            echo "Warning: Found potential errors in ${container} logs:"
+                            echo hasErrors
+                        }
+                        
+                        echo "Container ${container} is running properly"
+                    }
+                }
             }
         }
         
