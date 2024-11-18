@@ -34,7 +34,7 @@ pipeline {
                 script {
                     try {
                         dir('docker') {
-                            sh 'cd docker && docker-compose up --build'                            
+                            sh 'docker-compose up --build'                            
                         }
                     } catch (Exception e) {
                         error "Docker build/run thất bại: ${e.message}"
