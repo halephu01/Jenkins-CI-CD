@@ -173,10 +173,14 @@ services:
     ports:
       - "9000:9000"
     depends_on:
-      - mysql
-      - mongodb
-      - loki
-      - tempo
+      mysql:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      loki:
+        condition: service_started
+      tempo:
+        condition: service_started
     networks:
       custom_network:
         ipv4_address: 192.168.1.111
@@ -190,10 +194,10 @@ services:
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411/api/v2/spans
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/actuator/health"]
-      interval: 60s
+      interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 40s
+      start_period: 60s
 
   inventory-service:
     build:
