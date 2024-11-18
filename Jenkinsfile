@@ -24,44 +24,41 @@ pipeline {
             steps {
                 script {
                     sh 'docker-compose up -d'
+                    sleep(time: 120, unit: 'SECONDS')
                     
-                    sleep(time: 60, unit: 'SECONDS')
+                    def maxRetries = 10
+                    def retryCount = 0
+                    def success = false
                     
-                    def containers = sh(
-                        script: 'docker-compose ps --services',
-                        returnStdout: true
-                    ).trim().split('\n')
+                    while (!success && retryCount < maxRetries) {
+                        try {
+                            sh 'docker-compose ps --services'
+                            sh 'docker ps | grep api-gateway'
+                            sh 'docker logs api-gateway'
+                            
+                            def status = sh(script: 'docker inspect -f {{.State.Status}} api-gateway', returnStdout: true).trim()
+                            def health = sh(script: 'docker inspect -f {{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}} api-gateway', returnStdout: true).trim()
+                            
+                            echo "API Gateway Status: ${status}"
+                            echo "API Gateway Health: ${health}"
+                            
+                            if (status == 'running' && (health == 'healthy' || health == 'none')) {
+                                success = true
+                                echo "API Gateway is healthy!"
+                            } else {
+                                retryCount++
+                                echo "Attempt ${retryCount}/${maxRetries}: Waiting for API Gateway to be healthy..."
+                                sleep(time: 30, unit: 'SECONDS')
+                            }
+                        } catch (Exception e) {
+                            retryCount++
+                            echo "Attempt ${retryCount}/${maxRetries} failed: ${e.message}"
+                            sleep(time: 30, unit: 'SECONDS')
+                        }
+                    }
                     
-                    containers.each { container ->
-                        def containerStatus = sh(
-                            script: "docker inspect -f '{{.State.Status}}' ${container}",
-                            returnStdout: true
-                        ).trim()
-                        
-                        def healthStatus = sh(
-                            script: "docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' ${container}",
-                            returnStdout: true
-                        ).trim()
-                        
-                        if (containerStatus != 'running') {
-                            error "Container ${container} is not running. Status: ${containerStatus}"
-                        }
-                        
-                        if (healthStatus != 'none' && healthStatus != 'healthy') {
-                            error "Container ${container} is not healthy. Health status: ${healthStatus}"
-                        }
-                        
-                        def hasErrors = sh(
-                            script: "docker-compose logs ${container} | grep -i 'error\\|exception\\|failed' || true",
-                            returnStdout: true
-                        ).trim()
-                        
-                        if (hasErrors) {
-                            echo "Warning: Found potential errors in ${container} logs:"
-                            echo hasErrors
-                        }
-                        
-                        echo "Container ${container} is running properly"
+                    if (!success) {
+                        error "Container api-gateway is not healthy after ${maxRetries} attempts"
                     }
                 }
             }
