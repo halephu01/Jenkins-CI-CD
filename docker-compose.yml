@@ -9,7 +9,10 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: password
       MONGO_INITDB_DATABASE: product-service
     volumes:
-      - ./data/mongodb:/data/db
+      #for jenkins
+      - /var/jenkins_home/workspace/cicd/data/mongodb:/data/db
+      #for local
+      # - ./data/mongodb:/data/db
     networks:
       custom_network:
         ipv4_address: 192.168.1.101
@@ -28,7 +31,10 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - ./data/mysql:/var/lib/mysql
+      #for jenkins
+      - /var/jenkins_home/workspace/cicd/data/mysql:/var/lib/mysql
+      #for local
+      # - ./data/mysql:/var/lib/mysql
       - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
@@ -132,8 +138,11 @@ services:
     container_name: tempo
     command: [ "-config.file=/etc/tempo.yaml" ]
     volumes:
-      - ./docker/tempo/tempo.yml:/etc/tempo.yaml:ro
-      - ./data/tempo:/tmp/tempo
+      #for jenkins
+      - /var/jenkins_home/workspace/cicd/data/tempo:/tmp/tempo
+      #for local
+      # - ./data/tempo:/tmp/tempo
+      # - ./docker/tempo/tempo.yml:/etc/tempo.yml:ro
     ports:
       - "3110:3100"  # Tempo
       - "9411:9411" # zipkin
