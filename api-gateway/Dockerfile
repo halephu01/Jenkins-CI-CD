@@ -13,6 +13,8 @@ FROM openjdk:21-jdk-slim
 
 COPY --from=build /app/target/*.jar ./app.jar
 
+RUN apt-get update && apt-get install -y curl
+
 EXPOSE 9000
 
 ENTRYPOINT ["java", "-jar", "/app.jar"]
