@@ -16,7 +16,19 @@ pipeline {
         
         stage('Build and Deploy') {
             steps {
-                sh 'docker-compose up'
+                sh 'docker-compose up -d'
+            }
+        }
+        
+        stage('Verify Services') {
+            steps {
+                sh 'docker-compose ps'
+            }
+        }
+        
+        stage('Cleanup') {
+            steps {
+                sh 'docker-compose down'
             }
         }
     }
