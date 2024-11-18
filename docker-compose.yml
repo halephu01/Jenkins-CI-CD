@@ -188,6 +188,12 @@ services:
       - NOTIFICATION_SERVICE_URL=http://notification-service:8083
       - IDENTITY_SERVICE_URL=http://identity-service:8087
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411/api/v2/spans
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   inventory-service:
     build:
@@ -223,6 +229,12 @@ services:
         echo 'MySQL is ready!'
         java -jar /app.jar
       "
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   identity-service:
     build:
@@ -260,6 +272,12 @@ services:
         echo 'MySQL is ready!'
         java -jar /app.jar
       "
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8087/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   notification-service:
     build:
@@ -308,6 +326,12 @@ services:
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092 
       - SPRING_KAFKA_PRODUCER_PROPERTIES_SCHEMA_REGISTRY_URL=http://schema-registry:8085
       - LOKI_URL=http://loki:3100/loki/api/v1/push
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   product-service:
     build:
