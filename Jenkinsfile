@@ -2,15 +2,14 @@ pipeline {
     agent any
     
     environment {
-        JAVA_HOME = '/usr/lib/jvm/java-17-openjdk-amd64'  // Điều chỉnh path Java nếu cần
-        MAVEN_HOME = '/usr/share/maven'                    // Điều chỉnh path Maven nếu cần
+        JAVA_HOME = '/opt/java/openjdk'  
+        MAVEN_HOME = '/usr/share/maven'                   
         PATH = "${JAVA_HOME}/bin:${MAVEN_HOME}/bin:${env.PATH}"
     }
 
     stages {
         stage('Checkout') {
             steps {
-                // Checkout code từ repository
                 checkout scm
             }
         }
@@ -32,9 +31,7 @@ pipeline {
                 script {
                     try {
                         dir('docker') {
-                            sh 'docker-compose up --build -d'
-                            
-                            sh 'docker-compose logs'
+                            sh 'docker-compose up --build -d'                            
                         }
                     } catch (Exception e) {
                         error "Docker build/run thất bại: ${e.message}"
