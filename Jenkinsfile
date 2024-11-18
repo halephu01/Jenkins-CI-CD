@@ -16,7 +16,29 @@ pipeline {
         
         stage('Build and Deploy') {
             steps {
-                sh 'docker-compose up -d'
+                script {
+                    def maxRetries = 3
+                    def retryCount = 0
+                    def success = false
+                    
+                    while (!success && retryCount < maxRetries) {
+                        try {
+                            sh 'docker-compose pull'
+                            sh 'docker-compose up -d'
+                            success = true
+                        } catch (Exception e) {
+                            retryCount++
+                            echo "Attempt ${retryCount}/${maxRetries} failed: ${e.message}"
+                            if (retryCount < maxRetries) {
+                                sleep(time: 30, unit: 'SECONDS')
+                            }
+                        }
+                    }
+                    
+                    if (!success) {
+                        error "Failed to pull and start containers after ${maxRetries} attempts"
+                    }
+                }
             }
         }
         
