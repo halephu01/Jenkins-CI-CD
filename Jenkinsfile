@@ -4,6 +4,18 @@ pipeline {
         DOCKER_COMPOSE_FILE = 'docker-compose.yml'
     }
     stages {
+        stage('Install Dependencies') {
+            steps {
+                script {
+                    // Cài đặt Docker Compose
+                    sh '''
+                        curl -L "https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+                        chmod +x /usr/local/bin/docker-compose
+                    '''
+                }
+            }
+        }
+
         stage('Checkout Code') {
             steps {
                 git branch: 'main', url: 'https://github.com/halephu01/Jenkins-CI-CD.git'
