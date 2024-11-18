@@ -1,4 +1,6 @@
 pipeline {
+    agent any
+    
     environment {
         GITHUB_REPO_URL = 'https://github.com/halephu01/Jenkins-CI-CD.git'
         BRANCH_NAME = 'main'
