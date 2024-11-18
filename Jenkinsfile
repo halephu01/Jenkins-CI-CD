@@ -25,7 +25,7 @@ pipeline {
                 script {
                     sh 'docker-compose up -d'
                     
-                    sleep(time: 300, unit: 'SECONDS')
+                    sleep(time: 60, unit: 'SECONDS')
                     
                     def containers = sh(
                         script: 'docker-compose ps --services',

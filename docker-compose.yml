@@ -339,7 +339,7 @@ services:
       dockerfile: Dockerfile
     container_name: product-service
     ports:
-      - "8099:8099"
+      - "8080:8080"
     depends_on:
       mongodb:
         condition: service_healthy
