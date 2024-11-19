@@ -99,17 +99,9 @@ pipeline {
         stage('Build Docker Images') {
             steps {
                 script {
-                    dir('user-service') {
-                        docker.build("${USER_SERVICE_IMAGE}:${VERSION}")
-                    }
-                    
-                    dir('friend-service') {
-                        docker.build("${FRIEND_SERVICE_IMAGE}:${VERSION}")
-                    }
-                    
-                    dir('aggregate-service') {
-                        docker.build("${AGGREGATE_SERVICE_IMAGE}:${VERSION}")
-                    }
+                    sh'docker build -t user-service -f user-service/Dockerfile .'
+                    sh'docker build -t friend-service -f friend-service/Dockerfile .'
+                    sh'docker build -t aggregate-service -f aggregate-service/Dockerfile .'
                 }
             }
         }
