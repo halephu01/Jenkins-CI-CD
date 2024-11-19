@@ -19,7 +19,9 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
+                git branch: 'main',
+                    url: 'https://github.com/halephu01/Jenkins-CI-CD.git',
+                    credentialsId: 'github-credentials'
             }
         }
 
