@@ -100,8 +100,8 @@ pipeline {
         }
 
         stage('SonarQube Analysis') {
-            stage('Analyze User Service') {
-                steps {
+            steps {
+                script {
                     def service = 'user-service'
                     dir('user-service') {
                         withSonarQubeEnv('SonarQube') {
@@ -114,7 +114,7 @@ pipeline {
                         }
                     }
                 }
-            }          
+            }
         }
 
         stage('Quality Gate') {
