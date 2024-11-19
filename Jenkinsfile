@@ -114,7 +114,7 @@ pipeline {
                         try {
                             dir(service) {
                                 echo "Building ${service} Docker image..."
-                                def imageName = "${env.USER_SERVICE_IMAGE}:${BUILD_NUMBER}"
+                                def imageName = "${env}:${BUILD_NUMBER}"
                                 
                                 // Build image
                                 sh """
