@@ -9,6 +9,12 @@ pipeline {
         AGGREGATE_SERVICE_IMAGE = 'halephu01/aggregate-service'
         
         VERSION = "${BUILD_NUMBER}"
+        
+        DOCKER_IMAGES = [
+            'user-service',
+            'friend-service',
+            'aggregate-service'
+        ]
     }
     
     tools {
@@ -96,12 +102,32 @@ pipeline {
             }
         }
 
-        stage('Build Docker Images') {
+        stage('Build and Push Docker Images') {
             steps {
                 script {
-                    sh'docker build -t user-service -f user-service/Dockerfile .'
-                    sh'docker build -t friend-service -f friend-service/Dockerfile .'
-                    sh'docker build -t aggregate-service -f aggregate-service/Dockerfile .'
+                    DOCKER_IMAGES.each { service ->
+                        try {
+                            dir(service) {
+                                echo "Building ${service} Docker image..."
+                                def imageName = "halephu01/${service}:${BUILD_NUMBER}"
+                                
+                                // Build image
+                                sh """
+                                    docker build -t ${imageName} -f ${service}/Dockerfile . || {
+                                        echo "Failed to build ${service} image"
+                                        exit 1
+                                    }
+                                """
+                                
+                                // Push image if build successful
+                                echo "Pushing ${service} Docker image..."
+                                sh "docker push ${imageName}"
+                            }
+                        } catch (Exception e) {
+                            echo "Error processing ${service}: ${e.message}"
+                            throw e
+                        }
+                    }
                 }
             }
         }
@@ -115,17 +141,32 @@ pipeline {
         stage('Push Docker Images') {
             steps {
                 script {
-                    sh "docker push ${USER_SERVICE_IMAGE}:${VERSION}"
-                    sh "docker tag ${USER_SERVICE_IMAGE}:${VERSION} ${USER_SERVICE_IMAGE}:latest"
-                    sh "docker push ${USER_SERVICE_IMAGE}:latest"
-                    
-                    sh "docker push ${FRIEND_SERVICE_IMAGE}:${VERSION}"
-                    sh "docker tag ${FRIEND_SERVICE_IMAGE}:${VERSION} ${FRIEND_SERVICE_IMAGE}:latest"
-                    sh "docker push ${FRIEND_SERVICE_IMAGE}:latest"
-                    
-                    sh "docker push ${AGGREGATE_SERVICE_IMAGE}:${VERSION}"
-                    sh "docker tag ${AGGREGATE_SERVICE_IMAGE}:${VERSION} ${AGGREGATE_SERVICE_IMAGE}:latest"
-                    sh "docker push ${AGGREGATE_SERVICE_IMAGE}:latest"
+                    // Check if images exist before pushing
+                    sh """
+                        if docker image inspect halephu01/user-service:${BUILD_NUMBER} >/dev/null 2>&1; then
+                            echo "Pushing user-service image..."
+                            docker push halephu01/user-service:${BUILD_NUMBER}
+                        else
+                            echo "user-service image not found!"
+                            exit 1
+                        fi
+
+                        if docker image inspect halephu01/friend-service:${BUILD_NUMBER} >/dev/null 2>&1; then
+                            echo "Pushing friend-service image..."
+                            docker push halephu01/friend-service:${BUILD_NUMBER}
+                        else
+                            echo "friend-service image not found!"
+                            exit 1
+                        fi
+
+                        if docker image inspect halephu01/aggregate-service:${BUILD_NUMBER} >/dev/null 2>&1; then
+                            echo "Pushing aggregate-service image..."
+                            docker push halephu01/aggregate-service:${BUILD_NUMBER}
+                        else
+                            echo "aggregate-service image not found!"
+                            exit 1
+                        fi
+                    """
                 }
             }
         }
@@ -155,12 +196,24 @@ pipeline {
         }
         always {
             script {
-                sh '''
-                    docker-compose down || true
-                    docker logout
-                    # Only remove images if they exist
-                    docker images "halephu01/*:${BUILD_NUMBER}" --format "{{.Repository}}:{{.Tag}}" | xargs -r docker rmi
-                '''
+                try {
+                    // Cleanup
+                    sh """
+                        docker-compose down || true
+                        docker logout
+                        
+                        # Remove images with proper error handling
+                        for service in ${DOCKER_IMAGES.join(' ')}; do
+                            image="halephu01/\${service}:${BUILD_NUMBER}"
+                            if docker image inspect \${image} >/dev/null 2>&1; then
+                                echo "Removing image \${image}..."
+                                docker rmi \${image} || true
+                            fi
+                        done
+                    """
+                } catch (Exception e) {
+                    echo "Cleanup failed: ${e.message}"
+                }
             }
         }
     }
