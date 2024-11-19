@@ -118,7 +118,7 @@ pipeline {
                                 
                                 // Build image
                                 sh """
-                                    docker build -t ${imageName} . -f ${service}/Dockerfile || {
+                                    docker build -t ${env} . -f ${service}/Dockerfile || {
                                         echo "Failed to build ${service} image"
                                         exit 1
                                     }
