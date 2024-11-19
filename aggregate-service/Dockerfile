@@ -1,7 +1,6 @@
 FROM maven:3.9.6-amazoncorretto-21 AS build
 WORKDIR /app
-COPY pom.xml .
-COPY aggregate-service aggregate-service/
+COPY . . 
 RUN mvn clean package -f aggregate-service/pom.xml
 
 FROM openjdk:11-slim
