@@ -9,10 +9,6 @@ pipeline {
         AGGREGATE_SERVICE_IMAGE = 'halephu01/aggregate-service'
         
         VERSION = "${BUILD_NUMBER}"
-            
-        USER_SERVICE = 'user-service'
-        FRIEND_SERVICE = 'friend-service'
-        AGGREGATE_SERVICE = 'aggregate-service'
     }
     
     tools {
@@ -103,33 +99,26 @@ pipeline {
         stage('Build and Push Docker Images') {
             steps {
                 script {
-                    def serviceList = [
-                        env.USER_SERVICE,
-                        env.FRIEND_SERVICE,
-                        env.AGGREGATE_SERVICE
-                    ]
+                    // Định nghĩa services
+                    def services = ['user-service', 'friend-service', 'aggregate-service']
                     
-                    // Xử lý từng service
-                    serviceList.each { service ->
+                    services.each { service ->
+                        echo "Building ${service} Docker image..."
                         try {
-                            dir(service) {
-                                echo "Building ${service} Docker image..."
-                                def imageName = "${env}:${BUILD_NUMBER}"
-                                
-                                // Build image
-                                sh """
-                                    docker build -t ${env} . -f ${service}/Dockerfile || {
-                                        echo "Failed to build ${service} image"
-                                        exit 1
-                                    }
-                                """
-                                
-                                // Push image if build successful
-                                echo "Pushing ${service} Docker image..."
-                                sh "docker push ${imageName}"
-                            }
+                            // Build với tên image chuẩn
+                            sh """
+                                docker build -t ${service} -f ${service}/Dockerfile .
+                            """
+                            
+                            // Tag image với version
+                            sh """
+                                docker tag ${service} halephu01/${service}:${BUILD_NUMBER}
+                                docker tag ${service} halephu01/${service}:latest
+                            """
+                            
+                            echo "Successfully built ${service} image"
                         } catch (Exception e) {
-                            echo "Error processing ${service}: ${e.message}"
+                            echo "Error building ${service}: ${e.message}"
                             throw e
                         }
                     }
