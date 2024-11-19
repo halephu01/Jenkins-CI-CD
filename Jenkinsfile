@@ -9,6 +9,9 @@ pipeline {
         AGGREGATE_SERVICE_IMAGE = 'halephu01/aggregate-service'
         
         VERSION = "${BUILD_NUMBER}"
+        
+        SONAR_TOKEN = credentials('sonar-token')
+        SONAR_PROJECT_KEY = 'microservices-project'
     }
     
     tools {
@@ -92,6 +95,32 @@ pipeline {
                             junit '**/target/surefire-reports/*.xml'
                         }
                     }
+                }
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            stage('Analyze User Service') {
+                steps {
+                    def service = 'user-service'
+                    dir('user-service') {
+                        withSonarQubeEnv('SonarQube') {
+                            sh """
+                                ${scannerHome}/bin/sonar-scanner \
+                                -Dsonar.projectKey=${service} \
+                                -Dsonar.projectName=${service} \
+                                -Dsonar.sources=. 
+                            """
+                        }
+                    }
+                }
+            }          
+        }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 1, unit: 'HOURS') {
+                    waitForQualityGate abortPipeline: true
                 }
             }
         }
