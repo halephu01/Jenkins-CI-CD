@@ -1,52 +1,51 @@
-# spring-boot-based-microservices
+# Introduction to Event Sourcing in Microservices
 
-Basic skeleton for Spring Boot Microservices. It includes spring security for basic Auth. Spring cloud gateway is also implemented as an Edge Service. Lots of the spring cloud component integrated.
+This repository is a microservice reference example that is intended to teach the basics of event sourcing in Spring Boot applications.
 
-# How to run
+## System Architecture
 
-- Navigate to root of the project
-```
-    cd spring-boot-based-microservices
-```
-- Build the project
-```
-    mvn clean package -DskipTests     
-```
-![Maven Build](https://github.com/Nasruddin/spring-boot-based-microservices/blob/master/images/build.png?raw=true)
+For this reference, I chose to create a simple example domain with a high degree of relationships between data stored on separate microservices. In the architecture diagram below, you'll see an abstract component diagram that describes an event-driven microservice architecture containing two domain services and one aggregate processor.
 
-- Locate the docker directory from the root directory and run docker compose to startup the containers
-```
-    cd docker && docker-compose up --build
-```
-![Docker Compose Build](https://github.com/Nasruddin/spring-boot-based-microservices/blob/master/images/docker-compose.png?raw=true)
+![Event sourcing architecture diagram](https://imgur.com/hikqWCr.png)
 
-- Check if all our services are running and healthy
-```
-    docker ps
-```
-![Docker PS](https://github.com/Nasruddin/spring-boot-based-microservices/blob/master/images/docker-ps.png?raw=true)
+## Conventions
 
-- Let's check if all the services are up and running. We will reach to eureka server using gateway. 
-Open the browser and hit http://localhost:8443/eureka/web You will need to authenticate yourself before accessing the endpoint.
-```
-username : user
-password : password
-```
-![Eureka](https://github.com/Nasruddin/spring-boot-based-microservices/blob/master/images/eureka.png?raw=true)
+One of the main problems I see today when describing components of a microservice architecture is a general ambiguity in the roles of separate services. For this reason, this example will describe a set of conventions for the roles of separate services.
 
-- Now, we have a look at our gateway endpoints configurations as well. Hit http://localhost:8443/actuator/gateway/routes in the browser again and, you should be able to find all the routes configured.
-![Gateway Routes](https://github.com/Nasruddin/spring-boot-based-microservices/blob/master/images/gateway-routes.png?raw=true)
+### Domain Services
 
+**Domain services** are microservices that own the _system of record_ for a portion of the application's domain.
 
-- Coming to swagger/openapi specs, here is the address to access them - http://localhost:8443/openapi/swagger-ui.html
-![Swagger OpenApi Specs](https://github.com/Nasruddin/spring-boot-based-microservices/blob/master/images/swagger-openapi.png?raw=true)
+![Domain service](https://imgur.com/Lgy55OJ.png)
 
-- Please use the below curl to generate the access token with both read and write scope. 
-```
-curl -k http://writer:secret-writer@localhost:8443/oauth2/token -d grant_type=client_credentials -d scope="course:read course:write" 
-```
-![Swagger OpenApi Specs](https://github.com/Nasruddin/spring-boot-based-microservices/blob/master/images/oauth-endpoint.png?raw=true)
-![Swagger OpenApi Specs](https://github.com/Nasruddin/spring-boot-based-microservices/blob/master/images/jwt-io.png?raw=true)
+Domain services:
 
-## Note : Currently this project uses Spring Authorization server. Keep in mind, I'm planning to enhance the whole OAuth flow because it's in shaky state right now and, you may some face issues. We may also move to keycloak. 
-## These instructions are basic starting point and, the project does lot of other stuff like elastic and mongo configuration etc. Please feel free to play around. I really want to maintain this and keep up-to-date, however my current role doesn't give me enough spare time. Therefore, contributors and their contributions are welcome :)
+- Manage the storage of domain data that it owns.
+- Produce the API contract for the domain data that it owns.
+- Produce events when the state of any domain data changes.
+- Maintain relationship integrity to domain data owned by other services.
+
+### Aggregate Services
+
+**Aggregate services** are microservices that replicate eventually consistent views of domain data owned by separate _domain services_.
+
+![Aggregate service](https://imgur.com/1jx6rTn.png)
+
+Aggregate services:
+
+- Subscribe to domain events emitted by separate domain services.
+- Maintain an ordered immutable event log for events it receives.
+- Create connected query projections of distributed domain data.
+- Provide performant read-access to complex views of domain data.
+
+## Example Domain
+
+The example domain is a social network of users who can establish friend relationships with one another. I chose this domain because it has high join complexity when the domain data is split across separate services.
+
+![Domain graph of users and friends](https://imgur.com/Uqd7SHE.png)
+
+The diagram above is a domain graph that shows `User` nodes and `Friend` relationships. In a microservice architecture we may decide to decompose this domain graph into two separate domain services, a `user-service` and a `friend-service`. For this reason, we'll have foreign-key relationships stored in the `friend-service` that reference the unique identity of a `User` stored on the `user-service`. 
+
+# License
+
+This project is licensed under Apache License 2.0.

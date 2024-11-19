@@ -1,0 +1,32 @@
+services:
+  user-service:
+    build:
+      context: .
+      dockerfile: user-service/Dockerfile
+    ports:
+      - "4040:4040"
+    networks:
+      - microservices-network
+
+  friend-service:
+    build:
+      context: .
+      dockerfile: friend-service/Dockerfile
+    ports:
+      - "6060:6060"
+    networks:
+      - microservices-network
+
+  aggregate-service:
+    build:
+      context: .
+      dockerfile: aggregate-service/Dockerfile
+    ports:
+      - "5050:5050"
+    networks:
+      - microservices-network
+
+networks:
+  microservices-network:
+    name: 192.168.1.0/24
+    driver: bridge
