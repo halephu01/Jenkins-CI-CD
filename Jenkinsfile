@@ -9,12 +9,10 @@ pipeline {
         AGGREGATE_SERVICE_IMAGE = 'halephu01/aggregate-service'
         
         VERSION = "${BUILD_NUMBER}"
-        
-        DOCKER_IMAGES = [
-            'user-service',
-            'friend-service',
-            'aggregate-service'
-        ]
+            
+        USER_SERVICE = 'user-service'
+        FRIEND_SERVICE = 'friend-service'
+        AGGREGATE_SERVICE = 'aggregate-service'
     }
     
     tools {
@@ -105,15 +103,22 @@ pipeline {
         stage('Build and Push Docker Images') {
             steps {
                 script {
-                    DOCKER_IMAGES.each { service ->
+                    def serviceList = [
+                        env.USER_SERVICE,
+                        env.FRIEND_SERVICE,
+                        env.AGGREGATE_SERVICE
+                    ]
+                    
+                    // Xử lý từng service
+                    serviceList.each { service ->
                         try {
                             dir(service) {
                                 echo "Building ${service} Docker image..."
-                                def imageName = "halephu01/${service}:${BUILD_NUMBER}"
+                                def imageName = "${env.USER_SERVICE_IMAGE}:${BUILD_NUMBER}"
                                 
                                 // Build image
                                 sh """
-                                    docker build -t ${imageName} -f ${service}/Dockerfile . || {
+                                    docker build -t ${imageName} . -f ${service}/Dockerfile || {
                                         echo "Failed to build ${service} image"
                                         exit 1
                                     }
@@ -202,8 +207,8 @@ pipeline {
                         docker-compose down || true
                         docker logout
                         
-                        # Remove images with proper error handling
-                        for service in ${DOCKER_IMAGES.join(' ')}; do
+                        # Remove images
+                        for service in ${env.DOCKER_IMAGES}; do
                             image="halephu01/\${service}:${BUILD_NUMBER}"
                             if docker image inspect \${image} >/dev/null 2>&1; then
                                 echo "Removing image \${image}..."
