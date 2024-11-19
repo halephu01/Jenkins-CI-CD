@@ -10,7 +10,7 @@ pipeline {
         
         VERSION = "${BUILD_NUMBER}"
         
-        SONAR_TOKEN = credentials('sonar-token')
+        SONAR_TOKEN = credentials('sonar')
         SONAR_PROJECT_KEY = 'microservices-project'
     }
     
