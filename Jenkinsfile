@@ -147,30 +147,21 @@ pipeline {
     }
 
     post {
-        always {
-            sh 'docker logout'
-            
-            script {
-                sh """
-                    docker rmi ${USER_SERVICE_IMAGE}:${VERSION} || true
-                    docker rmi ${FRIEND_SERVICE_IMAGE}:${VERSION} || true
-                    docker rmi ${AGGREGATE_SERVICE_IMAGE}:${VERSION} || true
-                """
-            }
-        }
-        
         success {
-            slackSend(
-                color: 'good',
-                message: "Build #${BUILD_NUMBER} - Success\nAll services deployed successfully"
-            )
+            echo 'Pipeline executed successfully!'
         }
-        
         failure {
-            slackSend(
-                color: 'danger',
-                message: "Build #${BUILD_NUMBER} - Failed\nCheck console output at ${BUILD_URL}"
-            )
+            echo 'Pipeline execution failed!'
+        }
+        always {
+            script {
+                sh '''
+                    docker-compose down || true
+                    docker logout
+                    # Only remove images if they exist
+                    docker images "halephu01/*:${BUILD_NUMBER}" --format "{{.Repository}}:{{.Tag}}" | xargs -r docker rmi
+                '''
+            }
         }
     }
 } 
