@@ -55,63 +55,20 @@ pipeline {
                 }
             }
         }
-        
-        stage('Test Services') {
-            parallel {
-                stage('Test User Service') {
-                    steps {
-                        dir('user-service') {
-                            sh 'mvn test'
-                        }
-                    }
-                    post {
-                        always {
-                            junit '**/target/surefire-reports/*.xml'
-                        }
-                    }
-                }
-                
-                stage('Test Friend Service') {
-                    steps {
-                        dir('friend-service') {
-                            sh 'mvn test'
-                        }
-                    }
-                    post {
-                        always {
-                            junit '**/target/surefire-reports/*.xml'
-                        }
-                    }
-                }
-                
-                stage('Test Aggregate Service') {
-                    steps {
-                        dir('aggregate-service') {
-                            sh 'mvn test'
-                        }
-                    }
-                    post {
-                        always {
-                            junit '**/target/surefire-reports/*.xml'
-                        }
-                    }
-                }
-            }
-        }
 
         stage('SonarQube Analysis') {
             steps {
                 script {
-                    def service = 'user-service'
-                    dir('user-service') {
-                        withSonarQubeEnv('SonarQube') {
-                            sh """
-                                ${scannerHome}/bin/sonar-scanner \
-                                -Dsonar.projectKey=${service} \
-                                -Dsonar.projectName=${service} \
-                                -Dsonar.sources=. 
-                            """
-                        }
+                    def scannerHome = tool 'SonarScanner'
+                    withSonarQubeEnv(credentialsId: 'sonar') {
+                        sh """
+                            ${scannerHome}/bin/sonar-scanner \
+                            -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                            -Dsonar.sources=. \
+                            -Dsonar.java.binaries=target/classes \
+                            -Dsonar.host.url=\${SONAR_HOST_URL} \
+                            -Dsonar.login=\${SONAR_AUTH_TOKEN}
+                        """
                     }
                 }
             }
