@@ -60,14 +60,20 @@ pipeline {
             steps {
                 script {
                     def scannerHome = tool 'SonarScanner'
-                    withSonarQubeEnv(credentialsId: 'sonar') {
-                        sh """
-                            ${scannerHome}/bin/sonar-scanner \
-                            -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                            -Dsonar.sources=. \
-                            -Dsonar.host.url=\${SONAR_HOST_URL} \
-                            -Dsonar.login=\${SONAR_AUTH_TOKEN}
-                        """
+
+                    def services = ['user-service', 'friend-service', 'aggregate-service']
+                    
+                    withSonarQubeEnv('sonar') {
+                        services.each { service ->
+                            dir(service) {
+                                sh """
+                                    ${scannerHome}/bin/sonar-scanne r
+                                    -Dsonar.projectKey=${service} 
+                                    -Dsonar.projectName=${service} 
+                                    -Dsonar.sources=. 
+                                """
+                            }
+                        }
                     }
                 }
             }
