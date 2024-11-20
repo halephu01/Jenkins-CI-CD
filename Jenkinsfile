@@ -65,7 +65,6 @@ pipeline {
                             ${scannerHome}/bin/sonar-scanner \
                             -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
                             -Dsonar.sources=. \
-                            -Dsonar.java.binaries=target/classes \
                             -Dsonar.host.url=\${SONAR_HOST_URL} \
                             -Dsonar.login=\${SONAR_AUTH_TOKEN}
                         """
