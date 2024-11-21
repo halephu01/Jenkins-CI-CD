@@ -66,9 +66,9 @@ pipeline {
                             ${scannerHome}/bin/sonar-scanner 
                             -Dsonar.sources=.
                             mvn sonar:sonar \
-                                -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                                -Dsonar.host.url=http://localhost:9000 \
-                                -Dsonar.login=${SONAR_TOKEN}
+                            -Dsonar.projectKey=Scan \
+                            -Dsonar.host.url=https://c694-171-250-164-108.ngrok-free.app \
+                            -Dsonar.login=sonar
                         """
                     }
                 }
