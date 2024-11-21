@@ -70,6 +70,8 @@ pipeline {
                                     -Dsonar.projectKey=${svc} \
                                     -Dsonar.projectName=${svc} \
                                     -Dsonar.sources=. \
+
+                                    echo "Build ${svc} service successfully!"
                                 """
                             }
                         }
