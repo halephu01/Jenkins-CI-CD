@@ -60,7 +60,7 @@ pipeline {
             steps {
                 script {
                     def scannerHome = tool 'SonarScanner'
-                    def service = ['user-service', 'friend-service', 'aggregate-service']
+                    def svc = ['user-service', 'friend-service', 'aggregate-service']
 
                     withSonarQubeEnv('SonarScanner') {
                         services.each { svc ->
