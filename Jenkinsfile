@@ -70,7 +70,7 @@ pipeline {
                                     -Dsonar.projectKey=${service} \
                                     -Dsonar.projectName=${service} \
                                     -Dsonar.sources=. \
-
+                                    -Dsonar.java.binaries=target/classes \
                                     echo "Build ${service} service successfully!"
                                 """
                             }
