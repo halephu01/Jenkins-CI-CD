@@ -60,16 +60,19 @@ pipeline {
             steps {
                 script {
                     def scannerHome = tool 'SonarScanner'
+                    def service = ['user-service', 'friend-service', 'aggregate-service']
 
                     withSonarQubeEnv('SonarScanner') {
-                        sh """
-                            ${scannerHome}/bin/sonar-scanner
-                            mvn sonar:sonar \
-                            -Dsonar.projectKey=b3634529e569c216bec19276d4418e7600010aa4 \
-                            -Dsonar.sources=. \
-                            -Dsonar.host.url=https://c694-171-250-164-108.ngrok-free.app \
-                            -Dsonar.login=${SONAR_TOKEN}
-                        """
+                        service.each { service ->
+                            sh """
+                                ${scannerHome}/bin/sonar-scanner \
+                                        -Dsonar.projectKey=${service} \
+                                        -Dsonar.projectName=${service} \
+                                        -Dsonar.sources=. \
+                                        -Dsonar.host.url=${SONAR_URL} \
+                                        -Dsonar.login=${SONAR_TOKEN}
+                            """
+                        }
                     }
                 }
             }
