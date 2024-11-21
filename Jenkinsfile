@@ -64,14 +64,16 @@ pipeline {
 
                     withSonarQubeEnv('SonarScanner') {
                         service.each { service ->
-                            sh """
-                                ${scannerHome}/bin/sonar-scanner \
-                                        -Dsonar.projectKey=${service} \
-                                        -Dsonar.projectName=${service} \
-                                        -Dsonar.sources=. \
-                                        -Dsonar.host.url=${SONAR_URL} \
-                                        -Dsonar.login=${SONAR_TOKEN}
-                            """
+                            dir(service) {
+                                sh """
+                                    ${scannerHome}/bin/sonar-scanner \
+                                            -Dsonar.projectKey=${service} \
+                                            -Dsonar.projectName=${service} \
+                                            -Dsonar.sources=. \
+                                            -Dsonar.host.url=${SONAR_URL} \
+                                            -Dsonar.login=${SONAR_TOKEN}
+                                    """
+                            }
                         }
                     }
                 }
