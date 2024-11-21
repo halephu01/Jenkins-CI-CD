@@ -63,12 +63,12 @@ pipeline {
                     def service = ['user-service', 'friend-service', 'aggregate-service']
 
                     withSonarQubeEnv('SonarScanner') {
-                        services.each { service ->
-                            dir(service) {
+                        services.each { svc ->
+                            dir(svc) {
                                 sh """
                                     ${scannerHome}/bin/sonar-scanner \
-                                    -Dsonar.projectKey=${service} \
-                                    -Dsonar.projectName=${service} \
+                                    -Dsonar.projectKey=${svc} \
+                                    -Dsonar.projectName=${svc} \
                                     -Dsonar.sources=. \
                                 """
                             }
