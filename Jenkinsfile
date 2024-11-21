@@ -63,12 +63,12 @@ pipeline {
 
                     withSonarQubeEnv('SonarScanner') {
                         sh """
-                            ${scannerHome}/bin/sonar-scanner 
-                            -Dsonar.sources=.
+                            ${scannerHome}/bin/sonar-scanner
                             mvn sonar:sonar \
                             -Dsonar.projectKey=Scan \
+                            -Dsonar.sources=. \
                             -Dsonar.host.url=https://c694-171-250-164-108.ngrok-free.app \
-                            -Dsonar.login=sonar
+                            -Dsonar.login=b3634529e569c216bec19276d4418e7600010aa4
                         """
                     }
                 }
