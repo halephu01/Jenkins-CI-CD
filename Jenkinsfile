@@ -68,7 +68,7 @@ pipeline {
                             -Dsonar.projectKey=Scan \
                             -Dsonar.sources=. \
                             -Dsonar.host.url=https://c694-171-250-164-108.ngrok-free.app \
-                            -Dsonar.login=b3634529e569c216bec19276d4418e7600010aa4
+                            -Dsonar.login=${SONAR_TOKEN}
                         """
                     }
                 }
