@@ -60,18 +60,18 @@ pipeline {
             steps {
                 script {
                     def scannerHome = tool 'SonarScanner'
-                    def svc = ['user-service', 'friend-service', 'aggregate-service']
+                    def services = ['user-service', 'friend-service', 'aggregate-service']
 
                     withSonarQubeEnv('SonarScanner') {
-                        services.each { svc ->
-                            dir(svc) {
+                        services.each { service ->
+                            dir(service) {
                                 sh """
                                     ${scannerHome}/bin/sonar-scanner \
-                                    -Dsonar.projectKey=${svc} \
-                                    -Dsonar.projectName=${svc} \
+                                    -Dsonar.projectKey=${service} \
+                                    -Dsonar.projectName=${service} \
                                     -Dsonar.sources=. \
 
-                                    echo "Build ${svc} service successfully!"
+                                    echo "Build ${service} service successfully!"
                                 """
                             }
                         }
