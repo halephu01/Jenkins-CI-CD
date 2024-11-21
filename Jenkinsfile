@@ -64,10 +64,11 @@ pipeline {
                     withSonarQubeEnv('SonarScanner') {
                         sh """
                             ${scannerHome}/bin/sonar-scanner 
-                            -Dsonar.projectKey=${SONAR_PROJECT_KEY} 
-                            -Dsonar.sources=. 
-                            -Dsonar.host.url=\${http://localhost:9000} 
-                            -Dsonar.login=\${SONAR_AUTH_TOKEN}
+                            -Dsonar.sources=.
+                            mvn sonar:sonar \
+                                -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                                -Dsonar.host.url=http://localhost:9000 \
+                                -Dsonar.login=${SONAR_TOKEN}
                         """
                     }
                 }
