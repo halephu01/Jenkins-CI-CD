@@ -6,10 +6,7 @@ pipeline {
         
         USER_SERVICE_IMAGE = 'halephu01/user-service'
         FRIEND_SERVICE_IMAGE = 'halephu01/friend-service'
-        AGGREGATE_SERVICE_IMAGE = 'halephu01/aggregate-service'
-        
-        VERSION = "${BUILD_NUMBER}"
-        
+        AGGREGATE_SERVICE_IMAGE = 'halephu01/aggregate-service'        
         SONAR_TOKEN = credentials('sonar')
         SONAR_PROJECT_KEY = 'microservices-project'
     }
