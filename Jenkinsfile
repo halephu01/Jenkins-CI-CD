@@ -77,7 +77,7 @@ pipeline {
             }
         }        
         
-        stage('Build Docker Images') {
+        stage('Build and Push Docker Images') {
             steps {
                 script {
                     def services = ['user-service', 'friend-service', 'aggregate-service']
