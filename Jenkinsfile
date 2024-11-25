@@ -13,11 +13,6 @@ pipeline {
         SONAR_TOKEN = credentials('sonar')
         SONAR_PROJECT_KEY = 'microservices-project'
     }
-    
-    tools {
-        maven 'Maven 3.8.6'
-        jdk 'JDK 11'
-    }
 
     stages {
         stage('Checkout') {
@@ -82,20 +77,16 @@ pipeline {
         stage('Build and Push Docker Images') {
             steps {
                 script {
-                    // Định nghĩa services
                     def services = ['user-service', 'friend-service', 'aggregate-service']
                     
                     services.each { service ->
                         echo "Building ${service} Docker image..."
                         try {
-                            // Build với tên image chuẩn
                             sh """
                                 docker build -t ${service} -f ${service}/Dockerfile .
                             """
                             
-                            // Tag image với version
                             sh """
-                                docker tag ${service} halephu01/${service}:${BUILD_NUMBER}
                                 docker tag ${service} halephu01/${service}:latest
                             """
                             
@@ -118,7 +109,6 @@ pipeline {
         stage('Push Docker Images') {
             steps {
                 script {
-                    // Check if images exist before pushing
                     sh """
                         if docker image inspect halephu01/user-service:${BUILD_NUMBER} >/dev/null 2>&1; then
                             echo "Pushing user-service image..."
@@ -174,7 +164,6 @@ pipeline {
         always {
             script {
                 try {
-                    // Cleanup
                     sh """
                         docker-compose down || true
                         docker logout
