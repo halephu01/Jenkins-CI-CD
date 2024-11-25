@@ -71,66 +71,36 @@ pipeline {
             }
         }
         
-        stage('Build and Push Docker Images') {
+        stage('Login to DockerHub') {
+            steps {
+                sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
+            }
+        }        
+        
+        stage('Build Docker Images') {
             steps {
                 script {
                     def services = ['user-service', 'friend-service', 'aggregate-service']
                     
                     services.each { service ->
-                        echo "Building ${service} Docker image..."
+                        echo "Building and pushing ${service} Docker image..."
                         try {
                             sh """
                                 docker build -t ${service} -f ${service}/Dockerfile .
-                            """
-                            
-                            sh """
                                 docker tag ${service} halephu01/${service}:latest
                             """
                             
-                            echo "Successfully built ${service} image"
+                            sh """
+                                echo "Pushing ${service} image..."
+                                docker push halephu01/${service}:latest
+                            """
+                            
+                            echo "Successfully built and pushed ${service} image"
                         } catch (Exception e) {
-                            echo "Error building ${service}: ${e.message}"
+                            echo "Error processing ${service}: ${e.message}"
                             throw e
                         }
                     }
-                }
-            }
-        }
-
-        stage('Login to DockerHub') {
-            steps {
-                sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
-            }
-        }
-
-        stage('Push Docker Images') {
-            steps {
-                script {
-                    sh """
-                        if docker image inspect halephu01/user-service:${BUILD_NUMBER} >/dev/null 2>&1; then
-                            echo "Pushing user-service image..."
-                            docker push halephu01/user-service:${BUILD_NUMBER}
-                        else
-                            echo "user-service image not found!"
-                            exit 1
-                        fi
-
-                        if docker image inspect halephu01/friend-service:${BUILD_NUMBER} >/dev/null 2>&1; then
-                            echo "Pushing friend-service image..."
-                            docker push halephu01/friend-service:${BUILD_NUMBER}
-                        else
-                            echo "friend-service image not found!"
-                            exit 1
-                        fi
-
-                        if docker image inspect halephu01/aggregate-service:${BUILD_NUMBER} >/dev/null 2>&1; then
-                            echo "Pushing aggregate-service image..."
-                            docker push halephu01/aggregate-service:${BUILD_NUMBER}
-                        else
-                            echo "aggregate-service image not found!"
-                            exit 1
-                        fi
-                    """
                 }
             }
         }
